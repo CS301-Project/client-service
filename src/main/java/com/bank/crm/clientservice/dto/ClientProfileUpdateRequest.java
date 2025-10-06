@@ -1,11 +1,11 @@
 package com.bank.crm.clientservice.dto;
 
+import com.bank.crm.clientservice.validation.ValidEnum;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import java.time.LocalDate;
 
 import com.bank.crm.clientservice.models.enums.GenderTypes;
-import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 
 @Data
 @NoArgsConstructor
@@ -13,39 +13,38 @@ import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 @Builder
 public class ClientProfileUpdateRequest {
 
-    @Size(min = 2, max = 50)
+    @Size(min = 2, max = 50, message = "First name size must be between {min} and {max}")
     @Pattern(regexp = "^[A-Za-z ]+$", message = "First name must contain only letters and spaces")
     private String firstName;
 
-    @Size(min = 2, max = 50)
+    @Size(min = 2, max = 50, message = "Last name size must be between {min} and {max}")
     @Pattern(regexp = "^[A-Za-z ]+$", message = "Last name must contain only letters and spaces")
     private String lastName;
 
     @Past(message = "Date of birth must be in the past")
     private LocalDate dateOfBirth;
 
-    private GenderTypes gender;
+    @ValidEnum(enumClass = GenderTypes.class, message = "Gender must be one of Male, Female, Non Binary or Prefer not to say")
+    private String gender;
 
-    @Email(message = "Email should be valid")
+    @Email(message = "Email address must be valid")
     private String emailAddress;
 
     @Pattern(regexp = "^\\+[0-9]{10,15}$", message = "Phone number must start with + and contain 10-15 digits")
     private String phoneNumber;
 
-    @Size(min = 5, max = 100)
+    @Size(min = 5, max = 100, message = "Address size must be between {min} and {max}")
     private String address;
 
-    @Size(min = 2, max = 50)
+    @Size(min = 2, max = 50, message = "City size must be between {min} and {max}")
     private String city;
 
-    @Size(min = 2, max = 50)
+    @Size(min = 2, max = 50, message = "State size must be between {min} and {max}")
     private String state;
 
-    @Size(min = 2, max = 5)
+    @Size(min = 2, max = 5, message = "Country code size must be between {min} and {max}")
     private String country;
 
-    @Size(min = 4, max = 10)
+    @Size(min = 4, max = 10, message = "Postal code size must be between {min} and {max}")
     private String postalCode;
-
-    private ClientStatusTypes status;
 }
