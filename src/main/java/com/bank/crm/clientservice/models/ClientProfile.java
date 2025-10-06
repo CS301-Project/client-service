@@ -1,12 +1,12 @@
-package com.bank.crm.client_service.models;
+package com.bank.crm.clientservice.models;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import java.time.LocalDate;
 import java.util.UUID;
 
-import com.bank.crm.client_service.models.enums.GenderTypes;
-import com.bank.crm.client_service.models.enums.ClientStatusTypes;
+import com.bank.crm.clientservice.models.enums.GenderTypes;
+import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 @Entity
 @Table(name = "client_profile")
 @Data

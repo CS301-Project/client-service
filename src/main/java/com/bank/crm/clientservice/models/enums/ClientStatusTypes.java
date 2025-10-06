@@ -1,4 +1,4 @@
-package com.bank.crm.client_service.models.enums;
+package com.bank.crm.clientservice.models.enums;
 
 public enum ClientStatusTypes {
     PENDING,

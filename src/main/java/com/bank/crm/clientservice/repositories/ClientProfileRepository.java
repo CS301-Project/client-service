@@ -1,8 +1,8 @@
-package com.bank.crm.client_service.repositories;
+package com.bank.crm.clientservice.repositories;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-import com.bank.crm.client_service.models.ClientProfile;
+import com.bank.crm.clientservice.models.ClientProfile;
 import java.util.List;
 import java.util.UUID;
 
