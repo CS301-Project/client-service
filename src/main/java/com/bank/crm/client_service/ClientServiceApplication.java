@@ -1,4 +1,4 @@
-package com.bank.crm.clientservice;
+package com.bank.crm.client_service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
