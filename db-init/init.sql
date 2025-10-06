@@ -1,0 +1,54 @@
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "citext";
+
+CREATE TYPE gender_types AS ENUM ('MALE', 'FEMALE', 'NON-BINARY', 'PREFER NOT TO SAY');
+CREATE TYPE client_status_types AS ENUM ('PENDING', 'ACTIVE', 'INACTIVE');
+CREATE TABLE client_profile (
+    client_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    first_name VARCHAR(50) NOT NULL
+    CHECK (
+        char_length(first_name) BETWEEN 2 AND 50
+        AND first_name ~ '^[A-Za-z ]+$'
+    ),
+    last_name VARCHAR(50) NOT NULL
+    CHECK (
+        char_length(last_name) BETWEEN 2 AND 50
+        AND last_name ~ '^[A-Za-z ]+$'
+    ),
+   date_of_birth DATE NOT NULL
+   CHECK (
+        date_of_birth <= CURRENT_DATE
+        AND date_of_birth >= (CURRENT_DATE - INTERVAL '100 years')
+        AND date_of_birth <= (CURRENT_DATE - INTERVAL '18 years')
+    ),
+    gender gender_types NOT NULL,
+    email_address CITEXT NOT NULL
+    CHECK (
+        email_address ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
+    ),
+    phone_number VARCHAR(16) NOT NULL UNIQUE
+    CHECK (
+        phone_number ~ '^\+[0-9]{10,15}$'
+    ),
+    address VARCHAR(100) NOT NULL
+    CHECK (
+        char_length(address) BETWEEN 5 AND 100
+    ),
+    city VARCHAR(50) NOT NULL
+    CHECK (
+        char_length(city) BETWEEN 2 AND 50
+    ),
+    state VARCHAR(50) NOT NULL
+    CHECK (
+        char_length(state) BETWEEN 2 AND 50
+    ),
+    country VARCHAR(50) NOT NULL
+    CHECK (
+        char_length(country) BETWEEN 2 AND 5
+    ),
+    postal_code VARCHAR(10) NOT NULL
+    CHECK (
+        char_length(postal_code) BETWEEN 4 AND 10
+    ),
+    status client_status_types NOT NULL
+)
