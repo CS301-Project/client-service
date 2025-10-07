@@ -1,5 +1,7 @@
 package com.bank.crm.clientservice;
 
+import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
+import com.bank.crm.clientservice.dto.ClientProfileCreateResponse;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateResponse;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
@@ -16,9 +18,7 @@ import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.*;
@@ -37,37 +37,28 @@ public class ClientProfileServiceTest {
 
     @Test
     void shouldCreateClientSuccessfully_WhenEmailAndPhoneUnique() {
-        ClientProfile request = ClientProfile.builder()
-                .firstName("Fraser")
-                .lastName("Chua")
-                .dateOfBirth(LocalDate.of(2001, 12, 7))
-                .gender(GenderTypes.MALE)
-                .emailAddress("fraserchua@gmail.com")
-                .phoneNumber("+6596211649")
-                .address("123 Street")
-                .city("Singapore")
-                .state("Singapore")
-                .country("SG")
-                .postalCode("12345")
-                .status(ClientStatusTypes.INACTIVE)
-                .build();
+        ClientProfileCreateRequest request = TestDataFactory.validClientProfileCreateRequest();
 
         when(mockRepo.existsByEmailAddress(request.getEmailAddress())).thenReturn(false);
         when(mockRepo.existsByPhoneNumber(request.getPhoneNumber())).thenReturn(false);
-        when(mockRepo.save(any(ClientProfile.class))).thenAnswer(i -> i.getArguments()[0]);
+        when(mockRepo.save(any(ClientProfile.class))).thenAnswer(invocation -> {
+            ClientProfile client = invocation.getArgument(0);
+            client.setClientId(UUID.randomUUID());
+            client.setStatus(ClientStatusTypes.INACTIVE);
+            return client;
+        });
 
-        ClientProfile created = clientProfileService.createClientProfile(request);
+        ClientProfileCreateResponse created = clientProfileService.createClientProfile(request);
 
-        assertEquals("Fraser", created.getFirstName());
-        assertEquals("Chua", created.getLastName());
+        assertEquals("ValidFirst", created.getFirstName());
+        assertEquals("ValidLast", created.getLastName());
+        assertEquals(ClientStatusTypes.INACTIVE, created.getStatus());
+        assertNotNull(created.getClientId());
     }
 
     @Test
     void shouldThrowNonUniqueFieldException_WhenEmailAlreadyExists() {
-        ClientProfile request = ClientProfile.builder()
-                .emailAddress("existing@example.com")
-                .phoneNumber("+6596211649")
-                .build();
+        ClientProfileCreateRequest request = TestDataFactory.validClientProfileCreateRequest();
 
         when(mockRepo.existsByEmailAddress(request.getEmailAddress())).thenReturn(true);
         when(mockRepo.existsByPhoneNumber(request.getPhoneNumber())).thenReturn(false);
@@ -80,10 +71,7 @@ public class ClientProfileServiceTest {
 
     @Test
     void shouldThrowNonUniqueFieldException_WhenPhoneAlreadyExists() {
-        ClientProfile request = ClientProfile.builder()
-                .emailAddress("fraserchua@gmail.com")
-                .phoneNumber("+6596211649")
-                .build();
+        ClientProfileCreateRequest request = TestDataFactory.validClientProfileCreateRequest();
 
         when(mockRepo.existsByEmailAddress(request.getEmailAddress())).thenReturn(false);
         when(mockRepo.existsByPhoneNumber(request.getPhoneNumber())).thenReturn(true);
@@ -96,10 +84,7 @@ public class ClientProfileServiceTest {
 
     @Test
     void shouldThrowNonUniqueFieldException_WhenBothEmailAndPhoneAlreadyExist() {
-        ClientProfile request = ClientProfile.builder()
-                .emailAddress("existing@example.com")
-                .phoneNumber("+6596211649")
-                .build();
+        ClientProfileCreateRequest request = TestDataFactory.validClientProfileCreateRequest();
 
         when(mockRepo.existsByEmailAddress(request.getEmailAddress())).thenReturn(true);
         when(mockRepo.existsByPhoneNumber(request.getPhoneNumber())).thenReturn(true);

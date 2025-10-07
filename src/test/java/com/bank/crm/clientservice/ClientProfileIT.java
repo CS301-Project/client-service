@@ -1,5 +1,6 @@
 package com.bank.crm.clientservice;
 
+import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
 import com.bank.crm.clientservice.models.ClientProfile;
 import com.bank.crm.clientservice.models.enums.GenderTypes;
 import com.bank.crm.clientservice.repositories.ClientProfileRepository;
@@ -18,6 +19,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import static com.bank.crm.clientservice.TestDataFactory.validClientProfile;
 import static com.bank.crm.clientservice.TestDataFactory.validClientProfileUpdateRequest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -48,6 +51,124 @@ class ClientProfileIT {
     void setUp() {
         existingClientProfile = validClientProfile();
         clientProfileRepository.saveAndFlush(existingClientProfile);
+    }
+
+    @Test
+    void shouldCreateClientSuccessfully() throws Exception {
+        ClientProfileCreateRequest newClient = TestDataFactory.validClientProfileCreateRequest();
+
+        mvc.perform(post("/client-profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newClient)))
+                .andDo(print())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.clientId").exists())
+                .andExpect(jsonPath("$.firstName", is(newClient.getFirstName())))
+                .andExpect(jsonPath("$.lastName", is(newClient.getLastName())))
+                .andExpect(jsonPath("$.emailAddress", is(newClient.getEmailAddress())))
+                .andExpect(jsonPath("$.phoneNumber", is(newClient.getPhoneNumber())))
+                .andExpect(jsonPath("$.status", is("INACTIVE")));
+
+        assertTrue(clientProfileRepository.existsByEmailAddress(newClient.getEmailAddress()));
+        assertTrue(clientProfileRepository.existsByPhoneNumber(newClient.getPhoneNumber()));
+    }
+
+    @Test
+    void shouldFailWhenEmailNotUniqueOnCreate() throws Exception {
+        var existingClient = validClientProfile();
+        existingClient.setEmailAddress("duplicate@example.com");
+        existingClient.setPhoneNumber("+6591111222");
+        clientProfileRepository.saveAndFlush(existingClient);
+
+        ClientProfileCreateRequest newClient = TestDataFactory.validClientProfileCreateRequest();
+        newClient.setEmailAddress("duplicate@example.com");
+        newClient.setPhoneNumber("+6599998888");
+
+
+        mvc.perform(post("/client-profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newClient)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(content().json("[\"emailAddress\"]"));
+    }
+
+    @Test
+    void shouldFailWhenPhoneNotUniqueOnCreate() throws Exception {
+        var existingClient = validClientProfile();
+        existingClient.setEmailAddress("existing@example.com");
+        existingClient.setPhoneNumber("+6511111111");
+        clientProfileRepository.saveAndFlush(existingClient);
+
+        ClientProfileCreateRequest newClient = TestDataFactory.validClientProfileCreateRequest();
+        newClient.setEmailAddress("unique@example.com");
+        newClient.setPhoneNumber("+6511111111");
+
+        mvc.perform(post("/client-profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newClient)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(content().json("[\"phoneNumber\"]"));
+    }
+
+    @Test
+    void shouldFailWhenBothEmailAndPhoneNotUniqueOnCreate() throws Exception {
+        var existingClient = validClientProfile();
+        existingClient.setEmailAddress("existing@example.com");
+        existingClient.setPhoneNumber("+6512345678");
+        clientProfileRepository.saveAndFlush(existingClient);
+
+        ClientProfileCreateRequest newClient = TestDataFactory.validClientProfileCreateRequest();
+        newClient.setEmailAddress("existing@example.com");
+        newClient.setPhoneNumber("+6512345678");
+
+        mvc.perform(post("/client-profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newClient)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(content().json("[\"emailAddress\", \"phoneNumber\"]"));
+    }
+
+    @Test
+    void shouldFailWhenInvalidEmailFormatOnCreate() throws Exception {
+        ClientProfileCreateRequest newClient = TestDataFactory.validClientProfileCreateRequest();
+        newClient.setEmailAddress("invalid-email-format");
+
+        mvc.perform(post("/client-profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newClient)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("[\"Email address must be valid\"]"));
+    }
+
+    @Test
+    void shouldFailWhenInvalidPhoneFormatOnCreate() throws Exception {
+        ClientProfileCreateRequest newClient = TestDataFactory.validClientProfileCreateRequest();
+        newClient.setPhoneNumber("12345");
+
+        mvc.perform(post("/client-profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newClient)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("[\"Phone number must start with + and contain 10-15 digits\"]"));
+    }
+
+    @Test
+    void shouldFailWhenInvalidGenderEnumOnCreate() throws Exception {
+        ClientProfileCreateRequest newClient = TestDataFactory.validClientProfileCreateRequest();
+        newClient.setGender("Transgender");
+
+
+        mvc.perform(post("/client-profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newClient)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("[\"Gender must be one of Male, Female, Non Binary or Prefer not to say\"]"));
     }
 
     @Test

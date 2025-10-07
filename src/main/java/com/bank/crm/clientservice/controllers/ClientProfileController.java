@@ -1,5 +1,7 @@
 package com.bank.crm.clientservice.controllers;
 
+import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
+import com.bank.crm.clientservice.dto.ClientProfileCreateResponse;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateResponse;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
@@ -24,8 +26,25 @@ public class ClientProfileController {
     private final ClientProfileService clientProfileService;
 
     @PostMapping("/client-profile")
-    public ResponseEntity<ClientProfile> createClient(@Valid @RequestBody ClientProfile clientProfile) {
-        ClientProfile created = clientProfileService.createClientProfile(clientProfile);
+    public ResponseEntity<ClientProfileCreateResponse> createClient(
+            @Valid @RequestBody ClientProfileCreateRequest clientProfileCreateRequest
+    ) {
+        ClientProfileCreateResponse created = clientProfileService.createClientProfile(clientProfileCreateRequest);
+
+//        ClientProfileCreateResponse response = ClientProfileCreateResponse.builder()
+//                .clientId(created.getClientId())
+//                .firstName(created.getFirstName())
+//                .lastName(created.getLastName())
+//                .dateOfBirth(created.getDateOfBirth())
+//                .gender(created.getGender())
+//                .emailAddress(created.getEmailAddress())
+//                .phoneNumber(created.getPhoneNumber())
+//                .address(created.getAddress())
+//                .city(created.getCity())
+//                .state(created.getState())
+//                .country(created.getCountry())
+//                .postalCode(created.getPostalCode())
+//                .build();
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
