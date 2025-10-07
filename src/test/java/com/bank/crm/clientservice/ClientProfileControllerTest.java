@@ -58,11 +58,7 @@ class ClientProfileControllerTest {
                 .dateOfBirth(request.getDateOfBirth())
                 .gender(GenderTypes.valueOf(request.getGender().toUpperCase()))
                 .emailAddress(request.getEmailAddress())
-                .phoneNumber(request.getPhoneNumber())
                 .address(request.getAddress())
-                .city(request.getCity())
-                .state(request.getState())
-                .country(request.getCountry())
                 .postalCode(request.getPostalCode())
                 .status(ClientStatusTypes.INACTIVE)
                 .build();
