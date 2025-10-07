@@ -10,16 +10,36 @@ import com.bank.crm.clientservice.repositories.ClientProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
 public class ClientProfileService {
     private final ClientProfileRepository clientProfileRepository;
+
+    public ClientProfile createClientProfile( ClientProfile clientProfile) {
+
+        List<String> invalidFields = new ArrayList<>();
+
+        if (clientProfileRepository.existsByEmailAddress(clientProfile.getEmailAddress())) {
+            invalidFields.add("emailAddress");
+        }
+
+        if (clientProfileRepository.existsByPhoneNumber(clientProfile.getPhoneNumber())) {
+            invalidFields.add("phoneNumber");
+        }
+
+        if (!invalidFields.isEmpty()) {
+            throw new NonUniqueFieldException(invalidFields.toArray(new String[0]));
+        }
+
+        clientProfile.setClientId(UUID.randomUUID());
+        clientProfile.setStatus(com.bank.crm.clientservice.models.enums.ClientStatusTypes.INACTIVE);
+
+        return clientProfileRepository.save(clientProfile);
+    }
+
 
     public ClientProfileUpdateResponse updateClientProfile(UUID clientId, ClientProfileUpdateRequest clientProfileUpdateRequest) {
         ClientProfile existing = clientProfileRepository.findById(clientId)

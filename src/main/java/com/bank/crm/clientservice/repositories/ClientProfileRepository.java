@@ -10,4 +10,6 @@ import java.util.UUID;
 public interface ClientProfileRepository extends JpaRepository<ClientProfile, UUID> {
     boolean existsByEmailAddressAndClientIdNot(String email, UUID clientId);
     boolean existsByPhoneNumberAndClientIdNot(String phone, UUID clientId);
+    boolean existsByEmailAddress(String emailAddress);
+    boolean existsByPhoneNumber(String phoneNumber);
 } 
