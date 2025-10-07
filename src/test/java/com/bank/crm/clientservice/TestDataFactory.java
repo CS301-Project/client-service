@@ -1,22 +1,43 @@
 package com.bank.crm.clientservice;
 
 import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
+import com.bank.crm.clientservice.models.ClientProfile;
+import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
+import com.bank.crm.clientservice.models.enums.GenderTypes;
+
 import java.time.LocalDate;
 
 public class TestDataFactory {
     public static ClientProfileUpdateRequest validClientProfileUpdateRequest() {
-        ClientProfileUpdateRequest dto = new ClientProfileUpdateRequest();
-        dto.setFirstName("ValidFirst");
-        dto.setLastName("ValidLast");
-        dto.setDateOfBirth(LocalDate.of(1990, 1, 1));
-        dto.setGender("MALE");
-        dto.setEmailAddress("unique@example.com");
-        dto.setPhoneNumber("+6512345678");
-        dto.setAddress("123 Main Street");
-        dto.setCity("Singapore");
-        dto.setState("Singapore");
-        dto.setCountry("SG");
-        dto.setPostalCode("1234");
-        return dto;
+        return ClientProfileUpdateRequest.builder()
+                .firstName("ValidFirst")
+                .lastName("ValidLast")
+                .dateOfBirth(LocalDate.of(1990, 1, 1))
+                .gender("MALE")
+                .emailAddress("unique@example.com")
+                .phoneNumber("+6512345678")
+                .address("123 Main Street")
+                .city("Singapore")
+                .state("Singapore")
+                .country("SG")
+                .postalCode("1234")
+                .build();
+    }
+
+    public static ClientProfile validClientProfile() {
+        return ClientProfile.builder()
+                .firstName("John")
+                .lastName("Doe")
+                .dateOfBirth(LocalDate.of(1990, 1, 15))
+                .gender(GenderTypes.MALE)
+                .emailAddress("john.doe@example.com")
+                .phoneNumber("+6298765432")
+                .address("123 Example Street")
+                .city("Johor Bahru")
+                .state("Johor")
+                .country("MY")
+                .postalCode("12345")
+                .status(ClientStatusTypes.ACTIVE)
+                .build();
     }
 }
