@@ -17,6 +17,7 @@ public class ClientProfile {
 
     @Id
     @GeneratedValue
+    @Column(name = "client_id")
     private UUID clientId;
 
     @Column(name = "first_name", nullable = false, length = 50)

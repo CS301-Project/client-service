@@ -4,7 +4,7 @@ import com.bank.crm.clientservice.controllers.ClientProfileController;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateResponse;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
-import com.bank.crm.clientservice.exceptions.InvalidInputException;
+import com.bank.crm.clientservice.exceptions.NonUniqueFieldException;
 import com.bank.crm.clientservice.services.ClientProfileService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ClientProfileController.class)
 @AutoConfigureMockMvc(addFilters = false)
-public class ClientProfileControllerTest {
+class ClientProfileControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
@@ -66,11 +66,25 @@ public class ClientProfileControllerTest {
     }
 
     @Test
-    void shouldReturnBadRequestWhenInvalidInput() throws Exception {
+    void shouldReturnBadRequestWhenDtoFailsValidation() throws Exception {
+        UUID clientId = UUID.randomUUID();
+        ClientProfileUpdateRequest invalidDto = new ClientProfileUpdateRequest();
+        invalidDto.setFirstName("J");
+
+        String requestBody = objectMapper.writeValueAsString(invalidDto);
+
+        mockMvc.perform(put("/client-profile/" + clientId)
+                        .contentType("application/json")
+                        .content(requestBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenServiceThrowsNonUniqueFieldException() throws Exception {
         UUID clientId = UUID.randomUUID();
 
         when(clientProfileService.updateClientProfile(eq(clientId), any(ClientProfileUpdateRequest.class)))
-                .thenThrow(new InvalidInputException(new String[]{"firstName", "email"}));
+                .thenThrow(new NonUniqueFieldException(new String[]{"firstName", "email"}));
 
         ClientProfileUpdateRequest requestDto = new ClientProfileUpdateRequest();
         String requestBody = objectMapper.writeValueAsString(requestDto);
@@ -80,5 +94,4 @@ public class ClientProfileControllerTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest());
     }
-
 }

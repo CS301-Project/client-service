@@ -3,12 +3,14 @@ package com.bank.crm.clientservice.controllers;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateResponse;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
-import com.bank.crm.clientservice.exceptions.InvalidInputException;
+import com.bank.crm.clientservice.exceptions.NonUniqueFieldException;
 import com.bank.crm.clientservice.services.ClientProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
@@ -34,8 +36,18 @@ public class ClientProfileController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
     }
 
-    @ExceptionHandler(InvalidInputException.class)
-    public ResponseEntity<List<String>> handleInvalidInput(InvalidInputException ex) {
+    @ExceptionHandler(NonUniqueFieldException.class)
+    public ResponseEntity<List<String>> handleInvalidInput(NonUniqueFieldException ex) {
         return ResponseEntity.badRequest().body(Arrays.asList(ex.getInvalidFields()));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<List<String>> handleBeanValidationException(MethodArgumentNotValidException ex) {
+        List<String> errors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(FieldError::getDefaultMessage)
+                .toList();
+        return ResponseEntity.badRequest().body(errors);
     }
 }

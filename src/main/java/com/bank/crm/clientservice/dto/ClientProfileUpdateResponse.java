@@ -1,5 +1,4 @@
 package com.bank.crm.clientservice.dto;
-import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 import com.bank.crm.clientservice.models.enums.GenderTypes;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,5 +25,4 @@ public class ClientProfileUpdateResponse {
     private String state;
     private String country;
     private String postalCode;
-    private ClientStatusTypes status;
 }
