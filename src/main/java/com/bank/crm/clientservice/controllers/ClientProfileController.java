@@ -29,23 +29,8 @@ public class ClientProfileController {
     public ResponseEntity<ClientProfileCreateResponse> createClient(
             @Valid @RequestBody ClientProfileCreateRequest clientProfileCreateRequest
     ) {
-        ClientProfileCreateResponse created = clientProfileService.createClientProfile(clientProfileCreateRequest);
-
-//        ClientProfileCreateResponse response = ClientProfileCreateResponse.builder()
-//                .clientId(created.getClientId())
-//                .firstName(created.getFirstName())
-//                .lastName(created.getLastName())
-//                .dateOfBirth(created.getDateOfBirth())
-//                .gender(created.getGender())
-//                .emailAddress(created.getEmailAddress())
-//                .phoneNumber(created.getPhoneNumber())
-//                .address(created.getAddress())
-//                .city(created.getCity())
-//                .state(created.getState())
-//                .country(created.getCountry())
-//                .postalCode(created.getPostalCode())
-//                .build();
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        ClientProfileCreateResponse response = clientProfileService.createClientProfile(clientProfileCreateRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/client-profile/{clientId}")
