@@ -47,22 +47,8 @@ class ClientProfileControllerTest {
 
     @Test
     void shouldReturnClientData_WhenValidRequest() throws Exception {
-        ClientProfile request = ClientProfile.builder()
-                .firstName("Fraser")
-                .lastName("Chua")
-                .dateOfBirth(LocalDate.of(2001, 12, 7))
-                .gender(GenderTypes.MALE)
-                .emailAddress("fraserchua@gmail.com")
-                .phoneNumber("+6596211649")
-                .address("123 Street")
-                .city("Singapore")
-                .state("Singapore")
-                .country("SG")
-                .postalCode("12345")
-                .status(ClientStatusTypes.INACTIVE)
-                .build();
+        ClientProfile request = TestDataFactory.validClientProfile();
 
-        // Mock service to return the same client with clientId generated
         ClientProfile savedClient = ClientProfile.builder()
                 .clientId(UUID.randomUUID())
                 .firstName(request.getFirstName())
@@ -76,7 +62,7 @@ class ClientProfileControllerTest {
                 .state(request.getState())
                 .country(request.getCountry())
                 .postalCode(request.getPostalCode())
-                .status(request.getStatus())
+                .status(ClientStatusTypes.INACTIVE)
                 .build();
 
         Mockito.when(clientProfileService.createClientProfile(any(ClientProfile.class)))
@@ -87,8 +73,8 @@ class ClientProfileControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.clientId").value(savedClient.getClientId().toString()))
-                .andExpect(jsonPath("$.firstName").value("Fraser"))
-                .andExpect(jsonPath("$.emailAddress").value("fraserchua@gmail.com"));
+                .andExpect(jsonPath("$.firstName").value(request.getFirstName()))
+                .andExpect(jsonPath("$.emailAddress").value(request.getEmailAddress()));
     }
 
     @Test

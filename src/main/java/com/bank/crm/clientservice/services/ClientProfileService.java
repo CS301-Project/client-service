@@ -5,6 +5,7 @@ import com.bank.crm.clientservice.dto.ClientProfileUpdateResponse;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
 import com.bank.crm.clientservice.exceptions.NonUniqueFieldException;
 import com.bank.crm.clientservice.models.ClientProfile;
+import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 import com.bank.crm.clientservice.models.enums.GenderTypes;
 import com.bank.crm.clientservice.repositories.ClientProfileRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,24 +20,9 @@ public class ClientProfileService {
     private final ClientProfileRepository clientProfileRepository;
 
     public ClientProfile createClientProfile( ClientProfile clientProfile) {
-
-        List<String> invalidFields = new ArrayList<>();
-
-        if (clientProfileRepository.existsByEmailAddress(clientProfile.getEmailAddress())) {
-            invalidFields.add("emailAddress");
-        }
-
-        if (clientProfileRepository.existsByPhoneNumber(clientProfile.getPhoneNumber())) {
-            invalidFields.add("phoneNumber");
-        }
-
-        if (!invalidFields.isEmpty()) {
-            throw new NonUniqueFieldException(invalidFields.toArray(new String[0]));
-        }
-
+        validateEmailAndPhoneUniqueness(clientProfile);
         clientProfile.setClientId(UUID.randomUUID());
-        clientProfile.setStatus(com.bank.crm.clientservice.models.enums.ClientStatusTypes.INACTIVE);
-
+        clientProfile.setStatus(ClientStatusTypes.INACTIVE);
         return clientProfileRepository.save(clientProfile);
     }
 
@@ -86,6 +72,19 @@ public class ClientProfileService {
                 request.getEmailAddress() != null && clientProfileRepository.existsByEmailAddressAndClientIdNot(request.getEmailAddress(), clientId)
                         ? "emailAddress" : null,
                 request.getPhoneNumber() != null && clientProfileRepository.existsByPhoneNumberAndClientIdNot(request.getPhoneNumber(), clientId)
+                        ? "phoneNumber" : null
+        ).filter(Objects::nonNull).toList();
+
+        if (!errors.isEmpty()) {
+            throw new NonUniqueFieldException(errors.toArray(new String[0]));
+        }
+    }
+
+    private void validateEmailAndPhoneUniqueness(ClientProfile clientProfile) {
+        List<String> errors = Stream.of(
+                clientProfile.getEmailAddress() != null && clientProfileRepository.existsByEmailAddress(clientProfile.getEmailAddress())
+                        ? "emailAddress" : null,
+                clientProfile.getPhoneNumber() != null && clientProfileRepository.existsByPhoneNumber(clientProfile.getPhoneNumber())
                         ? "phoneNumber" : null
         ).filter(Objects::nonNull).toList();
 
