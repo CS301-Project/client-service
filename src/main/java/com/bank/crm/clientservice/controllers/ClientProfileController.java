@@ -4,6 +4,7 @@ import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateResponse;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
 import com.bank.crm.clientservice.exceptions.NonUniqueFieldException;
+import com.bank.crm.clientservice.models.ClientProfile;
 import com.bank.crm.clientservice.services.ClientProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,12 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ClientProfileController {
     private final ClientProfileService clientProfileService;
+
+    @PostMapping("/client-profile")
+    public ResponseEntity<ClientProfile> createClient(@Valid @RequestBody ClientProfile clientProfile) {
+        ClientProfile created = clientProfileService.createClientProfile(clientProfile);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
 
     @PutMapping("/client-profile/{clientId}")
     public ResponseEntity<ClientProfileUpdateResponse> updateClientProfile(
