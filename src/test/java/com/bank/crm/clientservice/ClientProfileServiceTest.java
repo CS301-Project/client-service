@@ -41,7 +41,7 @@ public class ClientProfileServiceTest {
         when(mockRepo.save(any(ClientProfile.class))).thenAnswer(invocation -> {
             ClientProfile client = invocation.getArgument(0);
             client.setClientId(UUID.randomUUID());
-            client.setStatus(ClientStatusTypes.INACTIVE);
+            client.setStatus(ClientStatusTypes.PENDING);
             return client;
         });
 
