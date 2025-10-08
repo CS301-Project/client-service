@@ -1,7 +1,9 @@
 package com.bank.crm.clientservice;
 
 import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
+import com.bank.crm.clientservice.dto.ClientStatusUpdateRequest;
 import com.bank.crm.clientservice.models.ClientProfile;
+import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 import com.bank.crm.clientservice.models.enums.GenderTypes;
 import com.bank.crm.clientservice.repositories.ClientProfileRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +31,9 @@ import static org.hamcrest.Matchers.is;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import jakarta.persistence.EntityManager;
+
+
 @Transactional
 @Testcontainers
 @Import(TestcontainersConfiguration.class)
@@ -44,6 +49,9 @@ class ClientProfileIT {
 
     @Autowired
     private ClientProfileRepository clientProfileRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Test
     void shouldCreateClientSuccessfully() throws Exception {
@@ -400,5 +408,94 @@ class ClientProfileIT {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("Client Id should be of type UUID"));
 
+    }
+
+    @Test
+    void shouldActivatePendingClientSuccessfully() throws Exception {
+        var pendingClient = validClientProfile();
+        pendingClient.setStatus(ClientStatusTypes.PENDING);
+        clientProfileRepository.saveAndFlush(pendingClient);
+
+        var request = new ClientStatusUpdateRequest(true);
+
+        mvc.perform(post("/client-profile/" + pendingClient.getClientId() + "/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clientId", is(pendingClient.getClientId().toString())))
+                .andExpect(jsonPath("$.status", is(ClientStatusTypes.ACTIVE.toString())));
+
+        var updatedClient = clientProfileRepository.findById(pendingClient.getClientId())
+                .orElseThrow();
+        assertEquals(ClientStatusTypes.ACTIVE, updatedClient.getStatus());
+    }
+
+    @Test
+    void shouldDeactivatePendingClientSuccessfully() throws Exception {
+        var pendingClient = validClientProfile();
+        pendingClient.setStatus(ClientStatusTypes.PENDING);
+        clientProfileRepository.saveAndFlush(pendingClient);
+
+        var request = new ClientStatusUpdateRequest(false);
+
+        mvc.perform(post("/client-profile/" + pendingClient.getClientId() + "/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clientId", is(pendingClient.getClientId().toString())))
+                .andExpect(jsonPath("$.status", is(ClientStatusTypes.INACTIVE.toString())));
+
+        var updatedClient = clientProfileRepository.findById(pendingClient.getClientId())
+                .orElseThrow();
+        assertEquals(ClientStatusTypes.INACTIVE, updatedClient.getStatus());
+    }
+
+    @Test
+    void shouldFailVerificationWhenClientIsActive() throws Exception {
+        var activeClient = validClientProfile();
+        activeClient.setStatus(ClientStatusTypes.ACTIVE);
+        clientProfileRepository.saveAndFlush(activeClient);
+
+        var request = new ClientStatusUpdateRequest(true);
+
+        mvc.perform(post("/client-profile/" + activeClient.getClientId() + "/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Client status must be PENDING to verify"));
+    }
+
+    @Test
+    void shouldFailVerificationWhenClientIsInactive() throws Exception {
+        var inactiveClient = validClientProfile();
+        inactiveClient.setStatus(ClientStatusTypes.INACTIVE);
+        clientProfileRepository.saveAndFlush(inactiveClient);
+        entityManager.flush();
+        entityManager.clear();
+
+        var request = new ClientStatusUpdateRequest(true);
+
+        mvc.perform(post("/client-profile/" + inactiveClient.getClientId() + "/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Client status must be PENDING to verify"));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenClientDoesNotExistOnVerify() throws Exception {
+        var randomId = UUID.randomUUID();
+        var request = new ClientStatusUpdateRequest(true);
+
+        mvc.perform(post("/client-profile/" + randomId + "/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isNotFound())
+                .andExpect(content().string("Client not found with ID: " + randomId));
     }
 }

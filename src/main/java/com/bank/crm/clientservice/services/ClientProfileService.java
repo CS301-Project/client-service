@@ -3,7 +3,9 @@ package com.bank.crm.clientservice.services;
 import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
 import com.bank.crm.clientservice.dto.ClientProfileResponse;
+import com.bank.crm.clientservice.dto.ClientStatusResponse;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
+import com.bank.crm.clientservice.exceptions.ClientNotPendingException;
 import com.bank.crm.clientservice.exceptions.NonUniqueFieldException;
 import com.bank.crm.clientservice.models.ClientProfile;
 import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
@@ -53,6 +55,21 @@ public class ClientProfileService {
         mergeClientProfile(existing, clientProfileUpdateRequest);
         ClientProfile updated = clientProfileRepository.save(existing);
         return mapToClientProfileResponse(updated);
+    }
+
+    public ClientStatusResponse updateClientStatus(UUID clientId, boolean activate) {
+        ClientProfile clientProfile = clientProfileRepository.findById(clientId)
+                .orElseThrow(() -> new ClientNotFoundException(clientId));
+
+        if (clientProfile.getStatus() != ClientStatusTypes.PENDING) {
+            throw new ClientNotPendingException("Client status must be PENDING to verify");
+        }
+
+        clientProfile.setStatus(activate ? ClientStatusTypes.ACTIVE : ClientStatusTypes.INACTIVE);
+
+        ClientProfile updated = clientProfileRepository.save(clientProfile);
+
+        return new ClientStatusResponse(updated.getClientId(), updated.getStatus().name());
     }
 
     private void mergeClientProfile(ClientProfile existing, ClientProfileUpdateRequest updateRequest) {
