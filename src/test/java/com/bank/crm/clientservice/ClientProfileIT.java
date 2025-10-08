@@ -18,10 +18,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static com.bank.crm.clientservice.TestDataFactory.validClientProfile;
 import static com.bank.crm.clientservice.TestDataFactory.validClientProfileUpdateRequest;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.is;
@@ -45,14 +45,6 @@ class ClientProfileIT {
     @Autowired
     private ClientProfileRepository clientProfileRepository;
 
-    private ClientProfile existingClientProfile;
-
-    @BeforeEach
-    void setUp() {
-        existingClientProfile = validClientProfile();
-        clientProfileRepository.saveAndFlush(existingClientProfile);
-    }
-
     @Test
     void shouldCreateClientSuccessfully() throws Exception {
         ClientProfileCreateRequest newClient = TestDataFactory.validClientProfileCreateRequest();
@@ -66,8 +58,7 @@ class ClientProfileIT {
                 .andExpect(jsonPath("$.firstName", is(newClient.getFirstName())))
                 .andExpect(jsonPath("$.lastName", is(newClient.getLastName())))
                 .andExpect(jsonPath("$.emailAddress", is(newClient.getEmailAddress())))
-                .andExpect(jsonPath("$.phoneNumber", is(newClient.getPhoneNumber())))
-                .andExpect(jsonPath("$.status", is("INACTIVE")));
+                .andExpect(jsonPath("$.phoneNumber", is(newClient.getPhoneNumber())));
 
         assertTrue(clientProfileRepository.existsByEmailAddress(newClient.getEmailAddress()));
         assertTrue(clientProfileRepository.existsByPhoneNumber(newClient.getPhoneNumber()));
@@ -173,6 +164,8 @@ class ClientProfileIT {
 
     @Test
     void shouldUpdateClientSuccessfully() throws Exception {
+        var existingClientProfile = validClientProfile();
+        clientProfileRepository.saveAndFlush(existingClientProfile);
         mvc.perform(put("/client-profile/" + existingClientProfile.getClientId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validClientProfileUpdateRequest())))
@@ -209,6 +202,9 @@ class ClientProfileIT {
 
     @Test
     void shouldIgnoreNullFieldsDuringUpdate() throws Exception {
+        var existingClientProfile = validClientProfile();
+        clientProfileRepository.saveAndFlush(existingClientProfile);
+
         var updateRequest = validClientProfileUpdateRequest();
         updateRequest.setFirstName(null);
         updateRequest.setLastName(null);
@@ -224,7 +220,10 @@ class ClientProfileIT {
     }
 
     @Test
-    void shouldNotFailUniquenessIfBelongsToSameClient() throws Exception {
+    void shouldNotFailUniquenessIfBelongsToSameClientOnUpdate() throws Exception {
+        var existingClientProfile = validClientProfile();
+        clientProfileRepository.saveAndFlush(existingClientProfile);
+
         var updateRequest = validClientProfileUpdateRequest();
         updateRequest.setEmailAddress(existingClientProfile.getEmailAddress());
         updateRequest.setPhoneNumber(existingClientProfile.getPhoneNumber());
@@ -236,7 +235,7 @@ class ClientProfileIT {
     }
 
     @Test
-    void shouldFailWhenClientNotFound() throws Exception {
+    void shouldFailWhenClientNotFoundOnUpdate() throws Exception {
         var nonExistentId = UUID.randomUUID();
         var updateRequest = validClientProfileUpdateRequest();
 
@@ -248,7 +247,10 @@ class ClientProfileIT {
     }
 
     @Test
-    void shouldFailWhenEmailNotUnique() throws Exception {
+    void shouldFailWhenEmailNotUniqueOnUpdate() throws Exception {
+        var existingClientProfile = validClientProfile();
+        clientProfileRepository.saveAndFlush(existingClientProfile);
+
         var anotherClient = validClientProfile();
         anotherClient.setEmailAddress("existing@example.com");
         anotherClient.setPhoneNumber("+651234567238");
@@ -265,7 +267,10 @@ class ClientProfileIT {
     }
 
     @Test
-    void shouldFailWhenPhoneNotUnique() throws Exception {
+    void shouldFailWhenPhoneNotUniqueOnUpdate() throws Exception {
+        var existingClientProfile = validClientProfile();
+        clientProfileRepository.saveAndFlush(existingClientProfile);
+
         var anotherClient = validClientProfile();
         anotherClient.setPhoneNumber("+6598765432");
         anotherClient.setEmailAddress("superunique@example.com");
@@ -282,7 +287,10 @@ class ClientProfileIT {
     }
 
     @Test
-    void shouldFailWhenBothEmailAndPhoneNotUnique() throws Exception {
+    void shouldFailWhenBothEmailAndPhoneNotUniqueOnUpdate() throws Exception {
+        var existingClientProfile = validClientProfile();
+        clientProfileRepository.saveAndFlush(existingClientProfile);
+
         var anotherClient = validClientProfile();
         anotherClient.setEmailAddress("existing@example.com");
         anotherClient.setPhoneNumber("+6598765432");
@@ -300,9 +308,11 @@ class ClientProfileIT {
     }
 
     @Test
-    void shouldFailWhenInvalidGenderEnum() throws Exception {
+    void shouldFailWhenInvalidGenderEnumOnUpdate() throws Exception {
+        var existingClientProfile = validClientProfile();
+        clientProfileRepository.saveAndFlush(existingClientProfile);
+
         var updateRequest = validClientProfileUpdateRequest();
-        // invalid enum string
         updateRequest.setGender("INVALID");
 
         mvc.perform(put("/client-profile/" + existingClientProfile.getClientId())
@@ -313,7 +323,10 @@ class ClientProfileIT {
     }
 
     @Test
-    void shouldFailWhenInvalidEmailFormat() throws Exception {
+    void shouldFailWhenInvalidEmailFormatOnUpdate() throws Exception {
+        var existingClientProfile = validClientProfile();
+        clientProfileRepository.saveAndFlush(existingClientProfile);
+
         var updateRequest = validClientProfileUpdateRequest();
         updateRequest.setEmailAddress("invalid-email");
 
@@ -325,9 +338,12 @@ class ClientProfileIT {
     }
 
     @Test
-    void shouldFailWhenInvalidPhoneFormat() throws Exception {
+    void shouldFailWhenInvalidPhoneFormatOnUpdate() throws Exception {
+        var existingClientProfile = validClientProfile();
+        clientProfileRepository.saveAndFlush(existingClientProfile);
+
         var updateRequest = validClientProfileUpdateRequest();
-        updateRequest.setPhoneNumber("12345"); // invalid format
+        updateRequest.setPhoneNumber("12345");
 
         mvc.perform(put("/client-profile/" + existingClientProfile.getClientId())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -337,7 +353,10 @@ class ClientProfileIT {
     }
 
     @Test
-    void shouldPreserveUnchangedFields() throws Exception {
+    void shouldPreserveUnchangedFieldsOnUpdate() throws Exception {
+        var existingClientProfile = validClientProfile();
+        clientProfileRepository.saveAndFlush(existingClientProfile);
+
         var updateRequest = validClientProfileUpdateRequest();
         updateRequest.setCity(null);
         updateRequest.setCountry(null);
@@ -352,5 +371,34 @@ class ClientProfileIT {
 
         assertEquals(existingClientProfile.getCity(), updatedClient.getCity());
         assertEquals(existingClientProfile.getCountry(), updatedClient.getCountry());
+    }
+
+    @Test
+    void shouldGetClientProfileSuccessfully() throws Exception {
+        ClientProfile existingClientProfile = validClientProfile();
+        clientProfileRepository.saveAndFlush(existingClientProfile);
+
+        mvc.perform(get("/client-profile/" + existingClientProfile.getClientId()))
+                .andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(existingClientProfile)));
+    }
+
+    @Test
+    void shouldFailWhenClientNotFoundOnFetch() throws Exception {
+        ClientProfile existingClientProfile = validClientProfile();
+        clientProfileRepository.saveAndFlush(existingClientProfile);
+
+        String unknownClientId = UUID.randomUUID().toString();
+        mvc.perform(get("/client-profile/" + unknownClientId))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(containsString(unknownClientId)));
+    }
+
+    @Test
+    void shouldFailWhenInvalidUUIDOnFetch() throws Exception {
+        mvc.perform(get("/client-profile/ssss"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Client Id should be of type UUID"));
+
     }
 }

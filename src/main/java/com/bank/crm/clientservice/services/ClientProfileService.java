@@ -1,9 +1,8 @@
 package com.bank.crm.clientservice.services;
 
 import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
-import com.bank.crm.clientservice.dto.ClientProfileCreateResponse;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
-import com.bank.crm.clientservice.dto.ClientProfileUpdateResponse;
+import com.bank.crm.clientservice.dto.ClientProfileResponse;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
 import com.bank.crm.clientservice.exceptions.NonUniqueFieldException;
 import com.bank.crm.clientservice.models.ClientProfile;
@@ -21,7 +20,7 @@ import java.util.stream.Stream;
 public class ClientProfileService {
     private final ClientProfileRepository clientProfileRepository;
 
-    public ClientProfileCreateResponse createClientProfile( ClientProfileCreateRequest clientProfileCreateRequest) {
+    public ClientProfileResponse createClientProfile( ClientProfileCreateRequest clientProfileCreateRequest) {
         validateEmailAndPhoneUniqueness(clientProfileCreateRequest);
         ClientProfile clientProfile = ClientProfile.builder()
                 .firstName(clientProfileCreateRequest.getFirstName())
@@ -39,32 +38,21 @@ public class ClientProfileService {
                 .build();
 
         ClientProfile saved = clientProfileRepository.save(clientProfile);
-
-        return ClientProfileCreateResponse.builder()
-                .clientId(saved.getClientId())
-                .firstName(saved.getFirstName())
-                .lastName(saved.getLastName())
-                .dateOfBirth(saved.getDateOfBirth())
-                .gender(saved.getGender())
-                .emailAddress(saved.getEmailAddress())
-                .phoneNumber(saved.getPhoneNumber())
-                .address(saved.getAddress())
-                .city(saved.getCity())
-                .state(saved.getState())
-                .country(saved.getCountry())
-                .postalCode(saved.getPostalCode())
-                .status(saved.getStatus())
-                .build();
+        return mapToClientProfileResponse(saved);
     }
 
+    public ClientProfile getClientProfile(UUID clientId) {
+        return clientProfileRepository.findById(clientId)
+                .orElseThrow(() -> new ClientNotFoundException(clientId));
+    }
 
-    public ClientProfileUpdateResponse updateClientProfile(UUID clientId, ClientProfileUpdateRequest clientProfileUpdateRequest) {
+    public ClientProfileResponse updateClientProfile(UUID clientId, ClientProfileUpdateRequest clientProfileUpdateRequest) {
         ClientProfile existing = clientProfileRepository.findById(clientId)
                 .orElseThrow(() -> new ClientNotFoundException(clientId));
         validateEmailAndPhoneUniqueness(clientId, clientProfileUpdateRequest);
         mergeClientProfile(existing, clientProfileUpdateRequest);
         ClientProfile updated = clientProfileRepository.save(existing);
-        return mapToClientProfileUpdateResponse(updated);
+        return mapToClientProfileResponse(updated);
     }
 
     private void mergeClientProfile(ClientProfile existing, ClientProfileUpdateRequest updateRequest) {
@@ -81,8 +69,8 @@ public class ClientProfileService {
         Optional.ofNullable(updateRequest.getPostalCode()).ifPresent(existing::setPostalCode);
     }
 
-    private ClientProfileUpdateResponse mapToClientProfileUpdateResponse(ClientProfile clientProfile) {
-        return ClientProfileUpdateResponse.builder()
+    private ClientProfileResponse mapToClientProfileResponse(ClientProfile clientProfile) {
+        return ClientProfileResponse.builder()
                 .clientId(clientProfile.getClientId())
                 .firstName(clientProfile.getFirstName())
                 .lastName(clientProfile.getLastName())
@@ -123,5 +111,4 @@ public class ClientProfileService {
             throw new NonUniqueFieldException(errors.toArray(new String[0]));
         }
     }
-
 }

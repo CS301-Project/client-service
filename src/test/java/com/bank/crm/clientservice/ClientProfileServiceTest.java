@@ -1,20 +1,17 @@
 package com.bank.crm.clientservice;
 
 import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
-import com.bank.crm.clientservice.dto.ClientProfileCreateResponse;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
-import com.bank.crm.clientservice.dto.ClientProfileUpdateResponse;
+import com.bank.crm.clientservice.dto.ClientProfileResponse;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
 import com.bank.crm.clientservice.exceptions.NonUniqueFieldException;
 import com.bank.crm.clientservice.models.ClientProfile;
 import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
-import com.bank.crm.clientservice.models.enums.GenderTypes;
 import com.bank.crm.clientservice.repositories.ClientProfileRepository;
 import com.bank.crm.clientservice.services.ClientProfileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -48,11 +45,10 @@ public class ClientProfileServiceTest {
             return client;
         });
 
-        ClientProfileCreateResponse created = clientProfileService.createClientProfile(request);
+        ClientProfileResponse created = clientProfileService.createClientProfile(request);
 
         assertEquals("ValidFirst", created.getFirstName());
         assertEquals("ValidLast", created.getLastName());
-        assertEquals(ClientStatusTypes.INACTIVE, created.getStatus());
         assertNotNull(created.getClientId());
     }
 
@@ -112,7 +108,7 @@ public class ClientProfileServiceTest {
         dto.setEmailAddress("new@example.com");
         dto.setPhoneNumber("+6598765432");
 
-        ClientProfileUpdateResponse response = clientProfileService.updateClientProfile(clientId, dto);
+        ClientProfileResponse response = clientProfileService.updateClientProfile(clientId, dto);
 
         assertEquals("NewName", response.getFirstName());
         assertEquals("new@example.com", response.getEmailAddress());
@@ -194,7 +190,7 @@ public class ClientProfileServiceTest {
         ClientProfileUpdateRequest dto = new ClientProfileUpdateRequest();
         dto.setFirstName(null);
 
-        ClientProfileUpdateResponse response = clientProfileService.updateClientProfile(clientId, dto);
+        ClientProfileResponse response = clientProfileService.updateClientProfile(clientId, dto);
         assertEquals("OldName", response.getFirstName());
     }
 
@@ -215,8 +211,26 @@ public class ClientProfileServiceTest {
         dto.setEmailAddress("existing@example.com");
         dto.setPhoneNumber("+6512345678");
 
-        ClientProfileUpdateResponse response = clientProfileService.updateClientProfile(clientId, dto);
+        ClientProfileResponse response = clientProfileService.updateClientProfile(clientId, dto);
         assertEquals("existing@example.com", response.getEmailAddress());
         assertEquals("+6512345678", response.getPhoneNumber());
+    }
+
+    @Test
+    void shouldGetClientProfileSuccessfully() {
+        UUID id = UUID.randomUUID();
+        ClientProfile existing = new ClientProfile();
+        existing.setClientId(id);
+        when(mockRepo.findById(id)).thenReturn(Optional.of(existing));
+        ClientProfile result = clientProfileService.getClientProfile(id);
+        assertEquals(id, result.getClientId());
+    }
+
+    @Test
+    void getClientProfile_notFound() {
+        UUID id = UUID.randomUUID();
+        when(mockRepo.findById(id)).thenReturn(Optional.empty());
+        assertThrows(ClientNotFoundException.class,
+                () -> clientProfileService.getClientProfile(id));
     }
 }

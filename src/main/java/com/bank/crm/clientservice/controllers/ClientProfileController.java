@@ -1,9 +1,8 @@
 package com.bank.crm.clientservice.controllers;
 
 import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
-import com.bank.crm.clientservice.dto.ClientProfileCreateResponse;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
-import com.bank.crm.clientservice.dto.ClientProfileUpdateResponse;
+import com.bank.crm.clientservice.dto.ClientProfileResponse;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
 import com.bank.crm.clientservice.exceptions.NonUniqueFieldException;
 import com.bank.crm.clientservice.models.ClientProfile;
@@ -15,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.Arrays;
 import java.util.List;
@@ -26,20 +26,28 @@ public class ClientProfileController {
     private final ClientProfileService clientProfileService;
 
     @PostMapping("/client-profile")
-    public ResponseEntity<ClientProfileCreateResponse> createClient(
+    public ResponseEntity<ClientProfileResponse> createClient(
             @Valid @RequestBody ClientProfileCreateRequest clientProfileCreateRequest
     ) {
-        ClientProfileCreateResponse response = clientProfileService.createClientProfile(clientProfileCreateRequest);
+        ClientProfileResponse response = clientProfileService.createClientProfile(clientProfileCreateRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/client-profile/{clientId}")
-    public ResponseEntity<ClientProfileUpdateResponse> updateClientProfile(
+    public ResponseEntity<ClientProfileResponse> updateClientProfile(
             @PathVariable UUID clientId,
             @Valid @RequestBody ClientProfileUpdateRequest clientProfileUpdateRequest
     ) {
-        ClientProfileUpdateResponse updatedClient = clientProfileService.updateClientProfile(clientId, clientProfileUpdateRequest);
+        ClientProfileResponse updatedClient = clientProfileService.updateClientProfile(clientId, clientProfileUpdateRequest);
         return ResponseEntity.ok(updatedClient);
+    }
+
+    @GetMapping("/client-profile/{clientId}")
+    public ResponseEntity<ClientProfile> getClientProfile(
+        @Valid @PathVariable UUID clientId
+    ){
+        ClientProfile clientProfile = clientProfileService.getClientProfile(clientId);
+        return ResponseEntity.ok(clientProfile);
     }
 
     @ExceptionHandler(ClientNotFoundException.class)
@@ -61,4 +69,12 @@ public class ClientProfileController {
                 .toList();
         return ResponseEntity.badRequest().body(errors);
     }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<String> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity
+                .badRequest()
+                .body("Client Id should be of type UUID");
+    }
+
 }
