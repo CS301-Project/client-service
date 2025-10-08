@@ -2,6 +2,7 @@ package com.bank.crm.clientservice;
 
 import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
 import com.bank.crm.clientservice.models.ClientProfile;
+import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 import com.bank.crm.clientservice.models.enums.GenderTypes;
 import com.bank.crm.clientservice.repositories.ClientProfileRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -399,6 +400,44 @@ class ClientProfileIT {
         mvc.perform(get("/client-profile/ssss"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("Client Id should be of type UUID"));
+    }
 
+    @Test
+    void shouldDeleteClientProfileSuccessfully() throws Exception {
+        ClientProfile existingClientProfile = validClientProfile();
+        clientProfileRepository.saveAndFlush(existingClientProfile);
+        mvc.perform(delete("/client-profile/" + existingClientProfile.getClientId()))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Client profile deleted successfully"));
+        ClientProfile updatedClientProfile = clientProfileRepository.findById(existingClientProfile.getClientId())
+                .orElseThrow();
+        assertEquals(ClientStatusTypes.INACTIVE, updatedClientProfile.getStatus());
+    }
+
+    @Test
+    void shouldFailWhenClientAlreadyInactiveOnDelete() throws Exception {
+        ClientProfile existingClientProfile = validClientProfile();
+        existingClientProfile.setStatus(ClientStatusTypes.INACTIVE);
+        clientProfileRepository.saveAndFlush(existingClientProfile);
+        mvc.perform(delete("/client-profile/" + existingClientProfile.getClientId()))
+                .andExpect(status().isNotFound());
+        ClientProfile fromDb = clientProfileRepository.findById(existingClientProfile.getClientId())
+                .orElseThrow();
+        assertEquals(ClientStatusTypes.INACTIVE, fromDb.getStatus());
+    }
+
+    @Test
+    void shouldFailWhenClientNotFoundOnDelete() throws Exception {
+        String id =  UUID.randomUUID().toString();
+        mvc.perform(delete("/client-profile/" + id))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(containsString(id)));
+    }
+
+    @Test
+    void shouldFailWhenClientIdNotUUIDOnDelete() throws Exception {
+        mvc.perform(delete("/client-profile/sss"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Client Id should be of type UUID"));
     }
 }

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.bank.crm.clientservice.TestDataFactory.validClientProfile;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -116,7 +117,7 @@ public class ClientProfileServiceTest {
     }
 
     @Test
-    void shouldFailClientNotFound() {
+    void shouldFailClientNotFoundOnUpdate() {
         ClientProfileUpdateRequest dto = validClientProfileUpdateRequest();
         assertThrows(ClientNotFoundException.class,
                 () -> clientProfileService.updateClientProfile(UUID.randomUUID(), dto));
@@ -227,10 +228,32 @@ public class ClientProfileServiceTest {
     }
 
     @Test
-    void getClientProfile_notFound() {
+    void shouldFailClientNotFoundOnFetch() {
         UUID id = UUID.randomUUID();
         when(mockRepo.findById(id)).thenReturn(Optional.empty());
         assertThrows(ClientNotFoundException.class,
                 () -> clientProfileService.getClientProfile(id));
+    }
+
+    @Test
+    void shouldFailClientStatusInactiveOnFetch() {
+        UUID clientId = UUID.randomUUID();
+        ClientProfile existing = validClientProfile();
+        existing.setClientId(clientId);
+        existing.setStatus(ClientStatusTypes.INACTIVE);
+        when(mockRepo.findById(clientId)).thenReturn(Optional.of(existing));
+        assertThrows(ClientNotFoundException.class,
+                () -> clientProfileService.getClientProfile(clientId));
+    }
+
+    @Test
+    void shouldDeleteClientProfileSuccessfully() {
+        UUID clientId = UUID.randomUUID();
+        ClientProfile existing = validClientProfile();
+        existing.setClientId(clientId);
+        when(mockRepo.findById(clientId)).thenReturn(Optional.of(existing));
+        when(mockRepo.save(existing)).thenReturn(existing);
+        clientProfileService.deleteClientProfile(clientId);
+        assertEquals(ClientStatusTypes.INACTIVE, existing.getStatus());
     }
 }
