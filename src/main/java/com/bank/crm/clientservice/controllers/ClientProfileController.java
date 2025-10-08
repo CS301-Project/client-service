@@ -55,6 +55,15 @@ public class ClientProfileController {
     public ResponseEntity<ClientProfile> getClientProfile(
         @Valid @PathVariable UUID clientId
     ){
+    @DeleteMapping("/client-profile/{clientId}")
+    public ResponseEntity<String> deleteClientProfile(@Valid @PathVariable UUID clientId) {
+        clientProfileService.deleteClientProfile(clientId);
+        return ResponseEntity.ok("Client profile deleted successfully");
+    }
+
+
+    @GetMapping("/client-profile/{clientId}")
+    public ResponseEntity<ClientProfile> getClientProfile(@Valid @PathVariable UUID clientId) {
         ClientProfile clientProfile = clientProfileService.getClientProfile(clientId);
         return ResponseEntity.ok(clientProfile);
     }

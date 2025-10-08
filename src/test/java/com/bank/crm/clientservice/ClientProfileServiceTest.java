@@ -116,7 +116,7 @@ public class ClientProfileServiceTest {
     }
 
     @Test
-    void shouldFailClientNotFound() {
+    void shouldFailClientNotFoundOnUpdate() {
         ClientProfileUpdateRequest dto = validClientProfileUpdateRequest();
         assertThrows(ClientNotFoundException.class,
                 () -> clientProfileService.updateClientProfile(UUID.randomUUID(), dto));
@@ -227,7 +227,7 @@ public class ClientProfileServiceTest {
     }
 
     @Test
-    void getClientProfile_notFound() {
+    void shouldFailClientNotFoundOnFetch() {
         UUID id = UUID.randomUUID();
         when(mockRepo.findById(id)).thenReturn(Optional.empty());
         assertThrows(ClientNotFoundException.class,
@@ -301,5 +301,24 @@ public class ClientProfileServiceTest {
 
         assertThrows(ClientNotFoundException.class,
                 () -> clientProfileService.updateClientStatus(clientId, true));
+    void shouldFailClientStatusInactiveOnFetch() {
+        UUID clientId = UUID.randomUUID();
+        ClientProfile existing = validClientProfile();
+        existing.setClientId(clientId);
+        existing.setStatus(ClientStatusTypes.INACTIVE);
+        when(mockRepo.findById(clientId)).thenReturn(Optional.of(existing));
+        assertThrows(ClientNotFoundException.class,
+                () -> clientProfileService.getClientProfile(clientId));
+    }
+
+    @Test
+    void shouldDeleteClientProfileSuccessfully() {
+        UUID clientId = UUID.randomUUID();
+        ClientProfile existing = validClientProfile();
+        existing.setClientId(clientId);
+        when(mockRepo.findById(clientId)).thenReturn(Optional.of(existing));
+        when(mockRepo.save(existing)).thenReturn(existing);
+        clientProfileService.deleteClientProfile(clientId);
+        assertEquals(ClientStatusTypes.INACTIVE, existing.getStatus());
     }
 }

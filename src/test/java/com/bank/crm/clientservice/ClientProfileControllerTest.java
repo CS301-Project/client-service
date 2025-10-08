@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.http.MediaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
 import java.util.UUID;
@@ -112,7 +113,7 @@ class ClientProfileControllerTest {
     }
 
     @Test
-    void shouldReturnNotFoundWhenClientNotFound() throws Exception {
+    void shouldReturnNotFoundWhenClientNotFoundOnUpdate() throws Exception {
         UUID clientId = UUID.randomUUID();
 
         when(clientProfileService.updateClientProfile(eq(clientId), any(ClientProfileUpdateRequest.class)))
@@ -128,7 +129,7 @@ class ClientProfileControllerTest {
     }
 
     @Test
-    void shouldReturnBadRequestWhenDtoFailsValidation() throws Exception {
+    void shouldReturnBadRequestWhenDtoFailsValidationOnUpdate() throws Exception {
         UUID clientId = UUID.randomUUID();
         ClientProfileUpdateRequest invalidDto = new ClientProfileUpdateRequest();
         invalidDto.setFirstName("J");
@@ -142,7 +143,7 @@ class ClientProfileControllerTest {
     }
 
     @Test
-    void shouldReturnBadRequestWhenServiceThrowsNonUniqueFieldException() throws Exception {
+    void shouldReturnBadRequestWhenServiceThrowsNonUniqueFieldExceptionOnUpdate() throws Exception {
         UUID clientId = UUID.randomUUID();
 
         when(clientProfileService.updateClientProfile(eq(clientId), any(ClientProfileUpdateRequest.class)))
@@ -168,7 +169,7 @@ class ClientProfileControllerTest {
     }
 
     @Test
-    void shouldReturnNotFoundWhenClientProfileNotFound() throws Exception {
+    void shouldReturnNotFoundWhenClientProfileNotFoundOnFetch() throws Exception {
         UUID clientId = UUID.randomUUID();
         when (clientProfileService.getClientProfile(clientId))
                 .thenThrow(new ClientNotFoundException(clientId));
@@ -178,7 +179,7 @@ class ClientProfileControllerTest {
     }
 
     @Test
-    void shouldReturnBadRequestWhenClientIdNotUUID() throws Exception {
+    void shouldReturnBadRequestWhenClientIdNotUUIDOnFetch() throws Exception {
         mockMvc.perform(get("/client-profile/sss"))
                 .andExpect(status().isBadRequest());
     }
@@ -233,6 +234,19 @@ class ClientProfileControllerTest {
         mockMvc.perform(post("/client-profile/" + clientId + "/verify")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
+    void shouldReturnOkWhenDeleteSuccessful() throws Exception {
+        UUID clientId = UUID.randomUUID();
+        doNothing().when(clientProfileService).deleteClientProfile(clientId);
+        mockMvc.perform(delete("/client-profile/" + clientId))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenClientProfileNotFoundOnDelete() throws Exception {
+        UUID clientId = UUID.randomUUID();
+        doThrow(new ClientNotFoundException(clientId))
+                .when(clientProfileService).deleteClientProfile(clientId);
+        mockMvc.perform(delete("/client-profile/" + clientId))
                 .andExpect(status().isNotFound());
     }
 
@@ -250,5 +264,8 @@ class ClientProfileControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("Client status must be PENDING to verify"));
+    void shouldReturnBadRequestWhenClientIdNotUUIDOnDelete() throws Exception {
+        mockMvc.perform(delete("/client-profile/sss"))
+                .andExpect(status().isBadRequest());
     }
 }

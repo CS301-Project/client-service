@@ -43,17 +43,23 @@ public class ClientProfileService {
         return mapToClientProfileResponse(saved);
     }
 
+    public void deleteClientProfile(UUID clientId) {
+        var existingProfile = getClientProfile(clientId);
+        existingProfile.setStatus(ClientStatusTypes.INACTIVE);
+        clientProfileRepository.save(existingProfile);
+    }
+
     public ClientProfile getClientProfile(UUID clientId) {
         return clientProfileRepository.findById(clientId)
+                .filter(profile -> profile.getStatus() != ClientStatusTypes.INACTIVE)
                 .orElseThrow(() -> new ClientNotFoundException(clientId));
     }
 
     public ClientProfileResponse updateClientProfile(UUID clientId, ClientProfileUpdateRequest clientProfileUpdateRequest) {
-        ClientProfile existing = clientProfileRepository.findById(clientId)
-                .orElseThrow(() -> new ClientNotFoundException(clientId));
+        var existingProfile = getClientProfile(clientId);
         validateEmailAndPhoneUniqueness(clientId, clientProfileUpdateRequest);
-        mergeClientProfile(existing, clientProfileUpdateRequest);
-        ClientProfile updated = clientProfileRepository.save(existing);
+        mergeClientProfile(existingProfile, clientProfileUpdateRequest);
+        ClientProfile updated = clientProfileRepository.save(existingProfile);
         return mapToClientProfileResponse(updated);
     }
 
