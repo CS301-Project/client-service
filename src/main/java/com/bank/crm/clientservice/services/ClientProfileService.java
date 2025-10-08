@@ -34,7 +34,7 @@ public class ClientProfileService {
                 .state(clientProfileCreateRequest.getState())
                 .country(clientProfileCreateRequest.getCountry())
                 .postalCode(clientProfileCreateRequest.getPostalCode())
-                .status(ClientStatusTypes.INACTIVE)
+                .status(ClientStatusTypes.PENDING)
                 .build();
 
         ClientProfile saved = clientProfileRepository.save(clientProfile);
