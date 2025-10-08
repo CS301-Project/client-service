@@ -1,5 +1,6 @@
 package com.bank.crm.clientservice;
 
+import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
 import com.bank.crm.clientservice.models.ClientProfile;
 import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
@@ -38,6 +39,22 @@ public class TestDataFactory {
                 .country("MY")
                 .postalCode("12345")
                 .status(ClientStatusTypes.ACTIVE)
+                .build();
+    }
+
+    public static ClientProfileCreateRequest validClientProfileCreateRequest() {
+        return ClientProfileCreateRequest.builder()
+                .firstName("ValidFirst")
+                .lastName("ValidLast")
+                .dateOfBirth(LocalDate.of(1990, 1, 1))
+                .gender("MALE")
+                .emailAddress("unique@example.com")
+                .phoneNumber("+6512345678")
+                .address("123 Main Street")
+                .city("Singapore")
+                .state("Singapore")
+                .country("SG")
+                .postalCode("1234")
                 .build();
     }
 }

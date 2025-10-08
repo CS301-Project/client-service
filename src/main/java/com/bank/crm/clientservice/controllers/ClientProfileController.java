@@ -1,5 +1,7 @@
 package com.bank.crm.clientservice.controllers;
 
+import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
+import com.bank.crm.clientservice.dto.ClientProfileCreateResponse;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateResponse;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
@@ -24,9 +26,11 @@ public class ClientProfileController {
     private final ClientProfileService clientProfileService;
 
     @PostMapping("/client-profile")
-    public ResponseEntity<ClientProfile> createClient(@Valid @RequestBody ClientProfile clientProfile) {
-        ClientProfile created = clientProfileService.createClientProfile(clientProfile);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ResponseEntity<ClientProfileCreateResponse> createClient(
+            @Valid @RequestBody ClientProfileCreateRequest clientProfileCreateRequest
+    ) {
+        ClientProfileCreateResponse response = clientProfileService.createClientProfile(clientProfileCreateRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/client-profile/{clientId}")

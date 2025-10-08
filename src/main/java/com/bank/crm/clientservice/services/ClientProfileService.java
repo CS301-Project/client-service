@@ -1,5 +1,7 @@
 package com.bank.crm.clientservice.services;
 
+import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
+import com.bank.crm.clientservice.dto.ClientProfileCreateResponse;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateResponse;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
@@ -19,11 +21,40 @@ import java.util.stream.Stream;
 public class ClientProfileService {
     private final ClientProfileRepository clientProfileRepository;
 
-    public ClientProfile createClientProfile( ClientProfile clientProfile) {
-        validateEmailAndPhoneUniqueness(clientProfile);
-        clientProfile.setClientId(UUID.randomUUID());
-        clientProfile.setStatus(ClientStatusTypes.INACTIVE);
-        return clientProfileRepository.save(clientProfile);
+    public ClientProfileCreateResponse createClientProfile( ClientProfileCreateRequest clientProfileCreateRequest) {
+        validateEmailAndPhoneUniqueness(clientProfileCreateRequest);
+        ClientProfile clientProfile = ClientProfile.builder()
+                .firstName(clientProfileCreateRequest.getFirstName())
+                .lastName(clientProfileCreateRequest.getLastName())
+                .dateOfBirth(clientProfileCreateRequest.getDateOfBirth())
+                .gender(GenderTypes.valueOf(clientProfileCreateRequest.getGender()))
+                .emailAddress(clientProfileCreateRequest.getEmailAddress())
+                .phoneNumber(clientProfileCreateRequest.getPhoneNumber())
+                .address(clientProfileCreateRequest.getAddress())
+                .city(clientProfileCreateRequest.getCity())
+                .state(clientProfileCreateRequest.getState())
+                .country(clientProfileCreateRequest.getCountry())
+                .postalCode(clientProfileCreateRequest.getPostalCode())
+                .status(ClientStatusTypes.INACTIVE)
+                .build();
+
+        ClientProfile saved = clientProfileRepository.save(clientProfile);
+
+        return ClientProfileCreateResponse.builder()
+                .clientId(saved.getClientId())
+                .firstName(saved.getFirstName())
+                .lastName(saved.getLastName())
+                .dateOfBirth(saved.getDateOfBirth())
+                .gender(saved.getGender())
+                .emailAddress(saved.getEmailAddress())
+                .phoneNumber(saved.getPhoneNumber())
+                .address(saved.getAddress())
+                .city(saved.getCity())
+                .state(saved.getState())
+                .country(saved.getCountry())
+                .postalCode(saved.getPostalCode())
+                .status(saved.getStatus())
+                .build();
     }
 
 
@@ -80,11 +111,11 @@ public class ClientProfileService {
         }
     }
 
-    private void validateEmailAndPhoneUniqueness(ClientProfile clientProfile) {
+    private void validateEmailAndPhoneUniqueness(ClientProfileCreateRequest clientProfileCreateRequest) {
         List<String> errors = Stream.of(
-                clientProfile.getEmailAddress() != null && clientProfileRepository.existsByEmailAddress(clientProfile.getEmailAddress())
+                clientProfileCreateRequest.getEmailAddress() != null && clientProfileRepository.existsByEmailAddress(clientProfileCreateRequest.getEmailAddress())
                         ? "emailAddress" : null,
-                clientProfile.getPhoneNumber() != null && clientProfileRepository.existsByPhoneNumber(clientProfile.getPhoneNumber())
+                clientProfileCreateRequest.getPhoneNumber() != null && clientProfileRepository.existsByPhoneNumber(clientProfileCreateRequest.getPhoneNumber())
                         ? "phoneNumber" : null
         ).filter(Objects::nonNull).toList();
 

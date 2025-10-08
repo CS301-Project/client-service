@@ -1,6 +1,8 @@
 package com.bank.crm.clientservice;
 
 import com.bank.crm.clientservice.controllers.ClientProfileController;
+import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
+import com.bank.crm.clientservice.dto.ClientProfileCreateResponse;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateResponse;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
@@ -47,25 +49,21 @@ class ClientProfileControllerTest {
 
     @Test
     void shouldReturnClientData_WhenValidRequest() throws Exception {
-        ClientProfile request = TestDataFactory.validClientProfile();
+        ClientProfileCreateRequest request = TestDataFactory.validClientProfileCreateRequest();
 
-        ClientProfile savedClient = ClientProfile.builder()
+        ClientProfileCreateResponse savedClient = ClientProfileCreateResponse.builder()
                 .clientId(UUID.randomUUID())
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .dateOfBirth(request.getDateOfBirth())
-                .gender(request.getGender())
+                .gender(GenderTypes.valueOf(request.getGender().toUpperCase()))
                 .emailAddress(request.getEmailAddress())
-                .phoneNumber(request.getPhoneNumber())
                 .address(request.getAddress())
-                .city(request.getCity())
-                .state(request.getState())
-                .country(request.getCountry())
                 .postalCode(request.getPostalCode())
                 .status(ClientStatusTypes.INACTIVE)
                 .build();
 
-        Mockito.when(clientProfileService.createClientProfile(any(ClientProfile.class)))
+        Mockito.when(clientProfileService.createClientProfile(any(ClientProfileCreateRequest.class)))
                 .thenReturn(savedClient);
 
         mockMvc.perform(post("/client-profile")
@@ -79,7 +77,7 @@ class ClientProfileControllerTest {
 
     @Test
     void shouldReturnBadRequest_WhenInvalidInput() throws Exception {
-        ClientProfile invalidClient = ClientProfile.builder()
+        ClientProfileCreateRequest invalidClient = ClientProfileCreateRequest.builder()
                 .lastName("chua")
                 .emailAddress("not-an-email")
                 .build();
@@ -92,22 +90,9 @@ class ClientProfileControllerTest {
 
     @Test
     void shouldReturnBadRequest_WhenServiceThrowsNonUniqueFieldException() throws Exception {
-        ClientProfile request = ClientProfile.builder()
-                .firstName("Fraser")
-                .lastName("Chua")
-                .dateOfBirth(LocalDate.of(2001, 12, 7))
-                .gender(GenderTypes.MALE)
-                .emailAddress("duplicate@gmail.com")
-                .phoneNumber("+6591234567")
-                .address("123 Street")
-                .city("Singapore")
-                .state("Singapore")
-                .country("SG")
-                .postalCode("12345")
-                .status(ClientStatusTypes.INACTIVE)
-                .build();
+        ClientProfileCreateRequest request = TestDataFactory.validClientProfileCreateRequest();
 
-        Mockito.when(clientProfileService.createClientProfile(any(ClientProfile.class)))
+        Mockito.when(clientProfileService.createClientProfile(any(ClientProfileCreateRequest.class)))
                 .thenThrow(new NonUniqueFieldException(new String[]{"emailAddress", "phoneNumber"}));
 
         mockMvc.perform(post("/client-profile")
