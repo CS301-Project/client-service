@@ -1,9 +1,8 @@
 package com.bank.crm.clientservice;
 
-import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
-import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
-import com.bank.crm.clientservice.dto.ClientProfileResponse;
+import com.bank.crm.clientservice.dto.*;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
+import com.bank.crm.clientservice.exceptions.ClientNotPendingException;
 import com.bank.crm.clientservice.exceptions.NonUniqueFieldException;
 import com.bank.crm.clientservice.models.ClientProfile;
 import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
@@ -236,6 +235,74 @@ public class ClientProfileServiceTest {
     }
 
     @Test
+    void shouldUpdateClientStatusToActiveIfPending() {
+        UUID clientId = UUID.randomUUID();
+        ClientProfile client = validClientProfile();
+        client.setClientId(clientId);
+        client.setStatus(ClientStatusTypes.PENDING);
+
+        when(mockRepo.findById(clientId)).thenReturn(Optional.of(client));
+        when(mockRepo.save(client)).thenReturn(client);
+
+        ClientStatusResponse response = clientProfileService.updateClientStatus(clientId, true);
+        assertEquals("ACTIVE", response.getStatus());
+        assertEquals(clientId, response.getClientId());
+    }
+
+    @Test
+    void shouldUpdateClientStatusToInactiveIfPending() {
+        UUID clientId = UUID.randomUUID();
+        ClientProfile client = validClientProfile();
+        client.setClientId(clientId);
+        client.setStatus(ClientStatusTypes.PENDING);
+
+        when(mockRepo.findById(clientId)).thenReturn(Optional.of(client));
+        when(mockRepo.save(client)).thenReturn(client);
+
+        ClientStatusResponse response = clientProfileService.updateClientStatus(clientId, false);
+        assertEquals("INACTIVE", response.getStatus());
+        assertEquals(clientId, response.getClientId());
+    }
+
+    @Test
+    void shouldThrowExceptionIfClientCurrentlyActive() {
+        UUID clientId = UUID.randomUUID();
+        ClientProfile client = new ClientProfile();
+        client.setClientId(clientId);
+        client.setStatus(ClientStatusTypes.ACTIVE);
+
+        when(mockRepo.findById(clientId)).thenReturn(Optional.of(client));
+
+        ClientNotPendingException ex = assertThrows(ClientNotPendingException.class,
+                () -> clientProfileService.updateClientStatus(clientId, true));
+
+        assertEquals("Client status must be PENDING to verify", ex.getMessage());
+    }
+
+    @Test
+    void shouldThrowExceptionIfClientCurrentlyInActive() {
+        UUID clientId = UUID.randomUUID();
+        ClientProfile client = new ClientProfile();
+        client.setClientId(clientId);
+        client.setStatus(ClientStatusTypes.INACTIVE);
+
+        when(mockRepo.findById(clientId)).thenReturn(Optional.of(client));
+
+        ClientNotPendingException ex = assertThrows(ClientNotPendingException.class,
+                () -> clientProfileService.updateClientStatus(clientId, true));
+
+        assertEquals("Client status must be PENDING to verify", ex.getMessage());
+    }
+
+    @Test
+    void shouldThrowClientNotFoundWhenUpdatingStatus() {
+        UUID clientId = UUID.randomUUID();
+        when(mockRepo.findById(clientId)).thenReturn(Optional.empty());
+
+        assertThrows(ClientNotFoundException.class,
+                () -> clientProfileService.updateClientStatus(clientId, true));
+    }
+
     void shouldFailClientStatusInactiveOnFetch() {
         UUID clientId = UUID.randomUUID();
         ClientProfile existing = validClientProfile();

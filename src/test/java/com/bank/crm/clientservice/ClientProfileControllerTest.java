@@ -1,10 +1,9 @@
 package com.bank.crm.clientservice;
 
 import com.bank.crm.clientservice.controllers.ClientProfileController;
-import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
-import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
-import com.bank.crm.clientservice.dto.ClientProfileResponse;
+import com.bank.crm.clientservice.dto.*;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
+import com.bank.crm.clientservice.exceptions.ClientNotPendingException;
 import com.bank.crm.clientservice.exceptions.NonUniqueFieldException;
 import com.bank.crm.clientservice.models.enums.GenderTypes;
 import com.bank.crm.clientservice.services.ClientProfileService;
@@ -21,13 +20,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ClientProfileController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -186,6 +185,58 @@ class ClientProfileControllerTest {
     }
 
     @Test
+    void shouldActivateClientSuccessfully() throws Exception {
+        UUID clientId = UUID.randomUUID();
+        ClientStatusUpdateRequest request = new ClientStatusUpdateRequest();
+        request.setActivate(true);
+
+        ClientStatusResponse response = new ClientStatusResponse(clientId, "ACTIVE");
+
+        when(clientProfileService.updateClientStatus(eq(clientId), eq(true)))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/client-profile/" + clientId + "/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clientId").value(clientId.toString()))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    void shouldDeactivateClientSuccessfully() throws Exception {
+        UUID clientId = UUID.randomUUID();
+        ClientStatusUpdateRequest request = new ClientStatusUpdateRequest();
+        request.setActivate(false);
+
+        ClientStatusResponse response = new ClientStatusResponse(clientId, "INACTIVE");
+
+        when(clientProfileService.updateClientStatus(eq(clientId), eq(false)))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/client-profile/" + clientId + "/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clientId").value(clientId.toString()))
+                .andExpect(jsonPath("$.status").value("INACTIVE"));
+    }
+
+    @Test
+    void shouldReturnNotFoundForUnknownClient() throws Exception {
+        UUID clientId = UUID.randomUUID();
+        ClientStatusUpdateRequest request = new ClientStatusUpdateRequest();
+        request.setActivate(true);
+
+        when(clientProfileService.updateClientStatus(eq(clientId), eq(true)))
+                .thenThrow(new ClientNotFoundException(clientId));
+
+        mockMvc.perform(post("/client-profile/" + clientId + "/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)));
+    }
+
+    @Test
     void shouldReturnOkWhenDeleteSuccessful() throws Exception {
         UUID clientId = UUID.randomUUID();
         doNothing().when(clientProfileService).deleteClientProfile(clientId);
@@ -200,6 +251,22 @@ class ClientProfileControllerTest {
                 .when(clientProfileService).deleteClientProfile(clientId);
         mockMvc.perform(delete("/client-profile/" + clientId))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldReturnBadRequestIfClientNotPending() throws Exception {
+        UUID clientId = UUID.randomUUID();
+        ClientStatusUpdateRequest request = new ClientStatusUpdateRequest();
+        request.setActivate(true);
+
+        when(clientProfileService.updateClientStatus(eq(clientId), eq(true)))
+                .thenThrow(new ClientNotPendingException("Client status must be PENDING to verify"));
+
+        mockMvc.perform(post("/client-profile/" + clientId + "/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Client status must be PENDING to verify"));
     }
 
     @Test

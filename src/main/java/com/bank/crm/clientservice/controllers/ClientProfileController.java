@@ -1,9 +1,8 @@
 package com.bank.crm.clientservice.controllers;
 
-import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
-import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
-import com.bank.crm.clientservice.dto.ClientProfileResponse;
+import com.bank.crm.clientservice.dto.*;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
+import com.bank.crm.clientservice.exceptions.ClientNotPendingException;
 import com.bank.crm.clientservice.exceptions.NonUniqueFieldException;
 import com.bank.crm.clientservice.models.ClientProfile;
 import com.bank.crm.clientservice.services.ClientProfileService;
@@ -21,11 +20,12 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@RequestMapping("/client-profile")
 @RequiredArgsConstructor
 public class ClientProfileController {
     private final ClientProfileService clientProfileService;
 
-    @PostMapping("/client-profile")
+    @PostMapping
     public ResponseEntity<ClientProfileResponse> createClient(
             @Valid @RequestBody ClientProfileCreateRequest clientProfileCreateRequest
     ) {
@@ -33,7 +33,7 @@ public class ClientProfileController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PutMapping("/client-profile/{clientId}")
+    @PutMapping("/{clientId}")
     public ResponseEntity<ClientProfileResponse> updateClientProfile(
             @PathVariable UUID clientId,
             @Valid @RequestBody ClientProfileUpdateRequest clientProfileUpdateRequest
@@ -42,14 +42,23 @@ public class ClientProfileController {
         return ResponseEntity.ok(updatedClient);
     }
 
-    @DeleteMapping("/client-profile/{clientId}")
+    @PostMapping("/{clientId}/verify")
+    public ResponseEntity<ClientStatusResponse> verifyClient(
+            @PathVariable UUID clientId,
+            @Valid @RequestBody ClientStatusUpdateRequest request
+    ) {
+        ClientStatusResponse response = clientProfileService.updateClientStatus(clientId, request.getActivate());
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{clientId}")
     public ResponseEntity<String> deleteClientProfile(@Valid @PathVariable UUID clientId) {
         clientProfileService.deleteClientProfile(clientId);
         return ResponseEntity.ok("Client profile deleted successfully");
     }
 
 
-    @GetMapping("/client-profile/{clientId}")
+    @GetMapping("/{clientId}")
     public ResponseEntity<ClientProfile> getClientProfile(@Valid @PathVariable UUID clientId) {
         ClientProfile clientProfile = clientProfileService.getClientProfile(clientId);
         return ResponseEntity.ok(clientProfile);
@@ -80,6 +89,13 @@ public class ClientProfileController {
         return ResponseEntity
                 .badRequest()
                 .body("Client Id should be of type UUID");
+    }
+
+    @ExceptionHandler(ClientNotPendingException.class)
+    public ResponseEntity<String> handleClientNotPending(ClientNotPendingException ex) {
+        return ResponseEntity
+                .badRequest()
+                .body(ex.getMessage());
     }
 
 }
