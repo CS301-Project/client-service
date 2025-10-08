@@ -301,6 +301,8 @@ public class ClientProfileServiceTest {
 
         assertThrows(ClientNotFoundException.class,
                 () -> clientProfileService.updateClientStatus(clientId, true));
+    }
+
     void shouldFailClientStatusInactiveOnFetch() {
         UUID clientId = UUID.randomUUID();
         ClientProfile existing = validClientProfile();

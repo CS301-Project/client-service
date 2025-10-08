@@ -232,8 +232,11 @@ class ClientProfileControllerTest {
                 .thenThrow(new ClientNotFoundException(clientId));
 
         mockMvc.perform(post("/client-profile/" + clientId + "/verify")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)));
+    }
+
+    @Test
     void shouldReturnOkWhenDeleteSuccessful() throws Exception {
         UUID clientId = UUID.randomUUID();
         doNothing().when(clientProfileService).deleteClientProfile(clientId);
@@ -264,6 +267,9 @@ class ClientProfileControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("Client status must be PENDING to verify"));
+    }
+
+    @Test
     void shouldReturnBadRequestWhenClientIdNotUUIDOnDelete() throws Exception {
         mockMvc.perform(delete("/client-profile/sss"))
                 .andExpect(status().isBadRequest());
