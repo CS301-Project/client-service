@@ -2,12 +2,10 @@ package com.bank.crm.clientservice;
 
 import com.bank.crm.clientservice.controllers.ClientProfileController;
 import com.bank.crm.clientservice.dto.ClientProfileCreateRequest;
-import com.bank.crm.clientservice.dto.ClientProfileCreateResponse;
 import com.bank.crm.clientservice.dto.ClientProfileUpdateRequest;
-import com.bank.crm.clientservice.dto.ClientProfileUpdateResponse;
+import com.bank.crm.clientservice.dto.ClientProfileResponse;
 import com.bank.crm.clientservice.exceptions.ClientNotFoundException;
 import com.bank.crm.clientservice.exceptions.NonUniqueFieldException;
-import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 import com.bank.crm.clientservice.models.enums.GenderTypes;
 import com.bank.crm.clientservice.services.ClientProfileService;
 import com.bank.crm.clientservice.models.ClientProfile;
@@ -21,19 +19,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.http.MediaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import javax.print.attribute.standard.Media;
-
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import java.time.LocalDate;
+
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 
 @WebMvcTest(ClientProfileController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -51,7 +45,7 @@ class ClientProfileControllerTest {
     void shouldReturnClientData_WhenValidRequest() throws Exception {
         ClientProfileCreateRequest request = TestDataFactory.validClientProfileCreateRequest();
 
-        ClientProfileCreateResponse savedClient = ClientProfileCreateResponse.builder()
+        ClientProfileResponse savedClient = ClientProfileResponse.builder()
                 .clientId(UUID.randomUUID())
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -60,7 +54,6 @@ class ClientProfileControllerTest {
                 .emailAddress(request.getEmailAddress())
                 .address(request.getAddress())
                 .postalCode(request.getPostalCode())
-                .status(ClientStatusTypes.INACTIVE)
                 .build();
 
         Mockito.when(clientProfileService.createClientProfile(any(ClientProfileCreateRequest.class)))
@@ -109,7 +102,7 @@ class ClientProfileControllerTest {
         UUID clientId = UUID.randomUUID();
 
         when(clientProfileService.updateClientProfile(eq(clientId), any(ClientProfileUpdateRequest.class)))
-                .thenReturn(new ClientProfileUpdateResponse());
+                .thenReturn(new ClientProfileResponse());
 
         ClientProfileUpdateRequest requestDto = new ClientProfileUpdateRequest();
         String requestBody = objectMapper.writeValueAsString(requestDto);
@@ -163,6 +156,32 @@ class ClientProfileControllerTest {
         mockMvc.perform(put("/client-profile/" + clientId)
                         .contentType("application/json")
                         .content(requestBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturnOkWhenClientProfileFound() throws Exception {
+        UUID clientId = UUID.randomUUID();
+        when (clientProfileService.getClientProfile(clientId))
+                .thenReturn(new ClientProfile());
+        mockMvc.perform(get("/client-profile/" + clientId)
+                        .contentType("application/json"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenClientProfileNotFound() throws Exception {
+        UUID clientId = UUID.randomUUID();
+        when (clientProfileService.getClientProfile(clientId))
+                .thenThrow(new ClientNotFoundException(clientId));
+        mockMvc.perform(get("/client-profile/" + clientId)
+                        .contentType("application/json"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenClientIdNotUUID() throws Exception {
+        mockMvc.perform(get("/client-profile/sss"))
                 .andExpect(status().isBadRequest());
     }
 }

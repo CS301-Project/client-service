@@ -12,7 +12,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ClientProfileUpdateResponse {
+public class ClientProfileResponse {
     private UUID clientId;
     private String firstName;
     private String lastName;
