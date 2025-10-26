@@ -25,6 +25,11 @@ import java.util.UUID;
 public class ClientProfileController {
     private final ClientProfileService clientProfileService;
 
+    @GetMapping("/health")
+    public ResponseEntity<String> healthCheck() {
+        return ResponseEntity.ok("Client Profile Service is up and running!");
+    }
+    
     @PostMapping
     public ResponseEntity<ClientProfileResponse> createClient(
             @Valid @RequestBody ClientProfileCreateRequest clientProfileCreateRequest
