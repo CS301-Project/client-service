@@ -19,11 +19,11 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/api/**"
+                                "/api/**",
+                                "/client-profile/health"
                         ).permitAll()
                         .anyRequest().permitAll()
                 );
         return http.build();
     }
-
 }

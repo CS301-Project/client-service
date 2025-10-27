@@ -1,0 +1,93 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_REPOSITORY: 200842396352.dkr.ecr.ap-southeast-1.amazonaws.com/client-service
+  ECS_CLUSTER: main-ecs-cluster
+  ECS_SERVICE: client-service
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build and push
+      id: build-image
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        # Build the Docker image
+        if ! docker build -t $ECR_REPOSITORY:$IMAGE_TAG .; then
+          echo "Failed to build Docker image"
+          exit 1
+        fi
+        
+        # Push the image with SHA tag
+        if ! docker push $ECR_REPOSITORY:$IMAGE_TAG; then
+          echo "Failed to push image with SHA tag"
+          exit 1
+        fi
+        
+        # Tag and push as latest
+        if ! docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REPOSITORY:latest; then
+          echo "Failed to tag image as latest"
+          exit 1
+        fi
+        
+        if ! docker push $ECR_REPOSITORY:latest; then
+          echo "Failed to push latest tag"
+          exit 1
+        fi
+        
+        echo "::set-output name=image::$ECR_REPOSITORY:$IMAGE_TAG"
+
+    - name: Deploy to ECS (only if exists)
+      run: |
+        echo "Checking if ECS service exists..."
+        if aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} \
+          --query "services[0].status" --output text 2>/dev/null | grep -q "ACTIVE"; then
+          echo "ECS service found. Deploying new image..."
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --force-new-deployment
+          
+          echo "Waiting for service to stabilize..."
+          aws ecs wait services-stable \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }}
+        else
+          echo "ECS service not found. Skipping deployment."
+        fi
+
+    - name: Deployment Summary
+      run: |
+        echo "### 🚀 Deployment Info" >> $GITHUB_STEP_SUMMARY
+        echo "- **Image:** ${ECR_REPOSITORY}:${GITHUB_SHA}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Region:** ${AWS_REGION}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Cluster:** ${ECS_CLUSTER}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Service:** ${ECS_SERVICE}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit:** ${GITHUB_SHA}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Triggered by:** ${GITHUB_ACTOR}" >> $GITHUB_STEP_SUMMARY
+        if ! aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE >/dev/null 2>&1; then
+          echo "- ⚠️ **ECS deployment skipped** (Cluster or service not found)" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ✅ **ECS deployment successful**" >> $GITHUB_STEP_SUMMARY
+        fi
