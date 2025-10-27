@@ -65,11 +65,15 @@ jobs:
           --query "services[0].status" --output text 2>/dev/null | grep -q "ACTIVE"; then
           echo "ECS service found. Deploying new image..."
           
+          # Get current task definition ARN
+          CURRENT_TASK_DEF_ARN=$(aws ecs describe-services \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --query "services[0].taskDefinition" \
+            --output text)
+
           # Get current task definition JSON
-          aws ecs describe-task-definition \
-            --task-definition $ECS_SERVICE \
-            --query "taskDefinition" \
-            --output json > task-def.json
+          aws ecs describe-task-definition --task-definition $CURRENT_TASK_DEF_ARN > task-def.json
 
           # Update the container image in the task definition
           jq --arg IMAGE "$ECR_REPOSITORY:$IMAGE_TAG" \
