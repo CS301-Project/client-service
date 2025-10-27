@@ -8,7 +8,7 @@ on:
 env:
   AWS_REGION: ap-southeast-1
   ECR_REPOSITORY: 200842396352.dkr.ecr.ap-southeast-1.amazonaws.com/client-service
-  ECS_CLUSTER: main-ecs-cluster
+  ECS_CLUSTER: client-ecs-cluster
   ECS_SERVICE: client-service
 
 jobs:
