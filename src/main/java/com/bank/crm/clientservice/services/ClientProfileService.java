@@ -55,6 +55,18 @@ public class ClientProfileService {
                 .orElseThrow(() -> new ClientNotFoundException(clientId));
     }
 
+    public List<ClientProfile> getClientProfiles(List<UUID> clientIds) {
+        return clientIds.stream()
+                .map(this::getClientProfile)
+                .toList();
+    }
+
+    public List<ClientProfile> getAllClientProfiles() {
+        return clientProfileRepository.findAll().stream()
+                .filter(profile -> profile.getStatus() != ClientStatusTypes.INACTIVE)
+                .toList();
+    }
+
     public ClientProfileResponse updateClientProfile(UUID clientId, ClientProfileUpdateRequest clientProfileUpdateRequest) {
         var existingProfile = getClientProfile(clientId);
         validateEmailAndPhoneUniqueness(clientId, clientProfileUpdateRequest);

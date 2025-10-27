@@ -64,6 +64,18 @@ public class ClientProfileController {
         return ResponseEntity.ok(clientProfile);
     }
 
+    @GetMapping
+    public ResponseEntity<List<ClientProfile>> getAllClientProfiles() {
+        List<ClientProfile> clientProfiles = clientProfileService.getAllClientProfiles();
+        return ResponseEntity.ok(clientProfiles);
+    }
+
+    @PostMapping("/batch")
+    public ResponseEntity<List<ClientProfile>> getClientProfiles(@RequestBody List<UUID> clientIds) {
+        List<ClientProfile> clientProfiles = clientProfileService.getClientProfiles(clientIds);
+        return ResponseEntity.ok(clientProfiles);
+    }
+
     @ExceptionHandler(ClientNotFoundException.class)
     public ResponseEntity<String> handleClientNotFound(ClientNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
