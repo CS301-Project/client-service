@@ -10,7 +10,8 @@ package com.bank.crm.clientservice.models.enums;
          return switch (value.toLowerCase()) {
              case "male" -> MALE;
              case "female" -> FEMALE;
-             case "prefer not to say" -> PREFER_NOT_TO_SAY;
+             case "non_binary", "non binary" -> NON_BINARY;
+             case "prefer_not_to_say", "prefer not to say" -> PREFER_NOT_TO_SAY;
              default -> throw new IllegalArgumentException("Invalid gender: " + value);
          };
     }
