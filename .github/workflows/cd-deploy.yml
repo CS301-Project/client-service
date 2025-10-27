@@ -72,18 +72,43 @@ jobs:
             --query "services[0].taskDefinition" \
             --output text)
 
+          echo "Current task definition ARN: $CURRENT_TASK_DEF_ARN"
+
           # Get current task definition JSON
           aws ecs describe-task-definition --task-definition $CURRENT_TASK_DEF_ARN > task-def.json
 
-          # Update the container image in the task definition
+          # Strip out unsupported fields for register-task-definition
+          jq '{
+            family,
+            taskRoleArn,
+            executionRoleArn,
+            networkMode,
+            containerDefinitions,
+            volumes,
+            placementConstraints,
+            requiresCompatibilities,
+            cpu,
+            memory,
+            pidMode,
+            ipcMode,
+            proxyConfiguration,
+            inferenceAccelerators,
+            ephemeralStorage,
+            runtimePlatform,
+            enableFaultInjection
+          }' task-def.json > task-def-clean.json
+
+          # Update the container image
           jq --arg IMAGE "$ECR_REPOSITORY:$IMAGE_TAG" \
-            '.containerDefinitions[0].image = $IMAGE' task-def.json > task-def-updated.json
+            '.containerDefinitions[0].image = $IMAGE' task-def-clean.json > task-def-final.json
 
           # Register new task definition
           NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
-            --cli-input-json file://task-def-updated.json \
+            --cli-input-json file://task-def-final.json \
             --query 'taskDefinition.taskDefinitionArn' \
             --output text)
+
+          echo "New task definition ARN: $NEW_TASK_DEF_ARN"
 
           # Trigger a new deployment based on new task definition
           aws ecs update-service \
@@ -96,9 +121,12 @@ jobs:
           aws ecs wait services-stable \
             --cluster ${{ env.ECS_CLUSTER }} \
             --services ${{ env.ECS_SERVICE }}
+
+          echo "Deployment complete ✅"
         else
           echo "ECS service not found. Skipping deployment."
         fi
+
 
     - name: Deployment Summary
       run: |
