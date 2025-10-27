@@ -8,7 +8,7 @@ on:
 env:
   AWS_REGION: ap-southeast-1
   ECR_REPOSITORY: 200842396352.dkr.ecr.ap-southeast-1.amazonaws.com/client-service
-  ECS_CLUSTER: main-ecs-cluster
+  ECS_CLUSTER: client-ecs-cluster
   ECS_SERVICE: client-service
 
 jobs:
@@ -64,11 +64,30 @@ jobs:
         if aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} \
           --query "services[0].status" --output text 2>/dev/null | grep -q "ACTIVE"; then
           echo "ECS service found. Deploying new image..."
-          aws ecs update-service \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --service ${{ env.ECS_SERVICE }} \
-            --force-new-deployment
           
+          # Get current task definition JSON
+          aws ecs describe-task-definition \
+            --task-definition $ECS_SERVICE \
+            --query "taskDefinition" \
+            --output json > task-def.json
+
+          # Update the container image in the task definition
+          jq --arg IMAGE "$ECR_REPOSITORY:$IMAGE_TAG" \
+            '.containerDefinitions[0].image = $IMAGE' task-def.json > task-def-updated.json
+
+          # Register new task definition
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://task-def-updated.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          # Trigger a new deployment based on new task definition
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --task-definition $NEW_TASK_DEF_ARN \
+            --force-new-deployment
+
           echo "Waiting for service to stabilize..."
           aws ecs wait services-stable \
             --cluster ${{ env.ECS_CLUSTER }} \
