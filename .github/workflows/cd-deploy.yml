@@ -8,7 +8,7 @@ on:
 env:
   AWS_REGION: ap-southeast-1
   ECR_REPOSITORY: 200842396352.dkr.ecr.ap-southeast-1.amazonaws.com/client-service
-  ECS_CLUSTER: main-ecs-cluster
+  ECS_CLUSTER: client-ecs-cluster
   ECS_SERVICE: client-service
 
 jobs:
@@ -56,26 +56,94 @@ jobs:
           exit 1
         fi
         
-        echo "::set-output name=image::$ECR_REPOSITORY:$IMAGE_TAG"
+        echo "image=$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
     - name: Deploy to ECS (only if exists)
       run: |
         echo "Checking if ECS service exists..."
-        if aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} \
-          --query "services[0].status" --output text 2>/dev/null | grep -q "ACTIVE"; then
-          echo "ECS service found. Deploying new image..."
+        
+        # Check if service exists and is ACTIVE
+        SERVICE_STATUS=$(aws ecs describe-services \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --services ${{ env.ECS_SERVICE }} \
+          --query 'services[0].status' \
+          --output text 2>/dev/null || echo "NONE")
+        
+        if [ "$SERVICE_STATUS" = "ACTIVE" ]; then
+          echo "ECS service found and active. Deploying new image..."
+          
+          # Get current task definition
+          TASK_DEF=$(aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }} \
+            --query 'services[0].taskDefinition' \
+            --output text)
+          
+          echo "Current task definition: $TASK_DEF"
+          
+          # Get task definition details
+          aws ecs describe-task-definition \
+            --task-definition $TASK_DEF \
+            --query 'taskDefinition' > task-def.json
+          
+          # Create new task definition with updated image
+          jq --arg IMAGE "${{ env.ECR_REPOSITORY }}:${{ github.sha }}" '
+            {
+              family,
+              taskRoleArn,
+              executionRoleArn,
+              networkMode,
+              containerDefinitions,
+              volumes,
+              placementConstraints,
+              requiresCompatibilities,
+              cpu,
+              memory,
+              pidMode,
+              ipcMode,
+              proxyConfiguration,
+              inferenceAccelerators,
+              ephemeralStorage,
+              runtimePlatform
+            } | 
+            with_entries(select(.value != null)) |
+            .containerDefinitions[0].image = $IMAGE
+          ' task-def.json > task-def-new.json
+          
+          # Register new task definition
+          NEW_TASK_DEF=$(aws ecs register-task-definition \
+            --cli-input-json file://task-def-new.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+          
+          echo "New task definition: $NEW_TASK_DEF"
+          
+          # Update service
           aws ecs update-service \
             --cluster ${{ env.ECS_CLUSTER }} \
             --service ${{ env.ECS_SERVICE }} \
+            --task-definition $NEW_TASK_DEF \
+            --deployment-configuration "minimumHealthyPercent=50,maximumPercent=100" \
             --force-new-deployment
           
-          echo "Waiting for service to stabilize..."
+          echo "Deployment initiated. Waiting for service to stabilize..."
           aws ecs wait services-stable \
             --cluster ${{ env.ECS_CLUSTER }} \
             --services ${{ env.ECS_SERVICE }}
+          
+          echo "✅ Deployment complete"
         else
-          echo "ECS service not found. Skipping deployment."
+          echo "⚠️ ECS service not found or not active (status: $SERVICE_STATUS). Skipping deployment."
         fi
+
+    - name: Reset ECS deployment configuration
+      if: success()
+      run: |
+        echo "Resetting deployment configuration to 100/200..."
+        aws ecs update-service \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --service ${{ env.ECS_SERVICE }} \
+          --deployment-configuration "minimumHealthyPercent=100,maximumPercent=200"
 
     - name: Deployment Summary
       run: |
