@@ -105,101 +105,103 @@ public class ClientProfileService {
         var existingProfile = getClientProfile(clientId);
         validateEmailAndPhoneUniqueness(clientId, clientProfileUpdateRequest);
 
-        // Track and log each field change
+        List<String> changedFields = new ArrayList<>();
+        List<String> beforeValues = new ArrayList<>();
+        List<String> afterValues = new ArrayList<>();
+
         if (clientProfileUpdateRequest.getFirstName() != null && !clientProfileUpdateRequest.getFirstName().equals(existingProfile.getFirstName())) {
-            String beforeValue = existingProfile.getFirstName();
-            String afterValue = clientProfileUpdateRequest.getFirstName();
-            existingProfile.setFirstName(afterValue);
-            String remarks = String.format("First name changed from %s to %s.", beforeValue, afterValue);
-            loggingService.sendUpdateLog(userId, clientId.toString(), "First Name", beforeValue, afterValue, remarks);
+            changedFields.add("First Name");
+            beforeValues.add(existingProfile.getFirstName());
+            afterValues.add(clientProfileUpdateRequest.getFirstName());
+            existingProfile.setFirstName(clientProfileUpdateRequest.getFirstName());
         }
 
         if (clientProfileUpdateRequest.getLastName() != null && !clientProfileUpdateRequest.getLastName().equals(existingProfile.getLastName())) {
-            String beforeValue = existingProfile.getLastName();
-            String afterValue = clientProfileUpdateRequest.getLastName();
-            existingProfile.setLastName(afterValue);
-            String remarks = String.format("Last name changed from %s to %s.", beforeValue, afterValue);
-            loggingService.sendUpdateLog(userId, clientId.toString(), "Last Name", beforeValue, afterValue, remarks);
+            changedFields.add("Last Name");
+            beforeValues.add(existingProfile.getLastName());
+            afterValues.add(clientProfileUpdateRequest.getLastName());
+            existingProfile.setLastName(clientProfileUpdateRequest.getLastName());
         }
 
         if (clientProfileUpdateRequest.getDateOfBirth() != null && !clientProfileUpdateRequest.getDateOfBirth().equals(existingProfile.getDateOfBirth())) {
-            String beforeValue = existingProfile.getDateOfBirth().toString();
-            String afterValue = clientProfileUpdateRequest.getDateOfBirth().toString();
+            changedFields.add("Date of Birth");
+            beforeValues.add(existingProfile.getDateOfBirth().toString());
+            afterValues.add(clientProfileUpdateRequest.getDateOfBirth().toString());
             existingProfile.setDateOfBirth(clientProfileUpdateRequest.getDateOfBirth());
-            String remarks = String.format("Date of birth changed from %s to %s.", beforeValue, afterValue);
-            loggingService.sendUpdateLog(userId, clientId.toString(), "Date of Birth", beforeValue, afterValue, remarks);
         }
 
         if (clientProfileUpdateRequest.getGender() != null) {
             GenderTypes newGender = GenderTypes.fromString(clientProfileUpdateRequest.getGender());
             if (!newGender.equals(existingProfile.getGender())) {
-                String beforeValue = existingProfile.getGender().toString();
-                String afterValue = newGender.toString();
+                changedFields.add("Gender");
+                beforeValues.add(existingProfile.getGender().toString());
+                afterValues.add(newGender.toString());
                 existingProfile.setGender(newGender);
-                String remarks = String.format("Gender changed from %s to %s.", beforeValue, afterValue);
-                loggingService.sendUpdateLog(userId, clientId.toString(), "Gender", beforeValue, afterValue, remarks);
             }
         }
 
         if (clientProfileUpdateRequest.getEmailAddress() != null && !clientProfileUpdateRequest.getEmailAddress().equals(existingProfile.getEmailAddress())) {
-            String beforeValue = existingProfile.getEmailAddress();
-            String afterValue = clientProfileUpdateRequest.getEmailAddress();
-            existingProfile.setEmailAddress(afterValue);
-            String remarks = String.format("Email address changed from %s to %s.", beforeValue, afterValue);
-            loggingService.sendUpdateLog(userId, clientId.toString(), "Email Address", beforeValue, afterValue, remarks);
+            changedFields.add("Email Address");
+            beforeValues.add(existingProfile.getEmailAddress());
+            afterValues.add(clientProfileUpdateRequest.getEmailAddress());
+            existingProfile.setEmailAddress(clientProfileUpdateRequest.getEmailAddress());
         }
 
         if (clientProfileUpdateRequest.getPhoneNumber() != null && !clientProfileUpdateRequest.getPhoneNumber().equals(existingProfile.getPhoneNumber())) {
-            String beforeValue = existingProfile.getPhoneNumber();
-            String afterValue = clientProfileUpdateRequest.getPhoneNumber();
-            existingProfile.setPhoneNumber(afterValue);
-            String remarks = String.format("Phone number changed from %s to %s.", beforeValue, afterValue);
-            loggingService.sendUpdateLog(userId, clientId.toString(), "Phone Number", beforeValue, afterValue, remarks);
+            changedFields.add("Phone Number");
+            beforeValues.add(existingProfile.getPhoneNumber());
+            afterValues.add(clientProfileUpdateRequest.getPhoneNumber());
+            existingProfile.setPhoneNumber(clientProfileUpdateRequest.getPhoneNumber());
         }
 
         if (clientProfileUpdateRequest.getAddress() != null && !clientProfileUpdateRequest.getAddress().equals(existingProfile.getAddress())) {
-            String beforeValue = existingProfile.getAddress();
-            String afterValue = clientProfileUpdateRequest.getAddress();
-            existingProfile.setAddress(afterValue);
-            String remarks = String.format("Address changed from %s to %s.", beforeValue, afterValue);
-            loggingService.sendUpdateLog(userId, clientId.toString(), "Address", beforeValue, afterValue, remarks);
+            changedFields.add("Address");
+            beforeValues.add(existingProfile.getAddress());
+            afterValues.add(clientProfileUpdateRequest.getAddress());
+            existingProfile.setAddress(clientProfileUpdateRequest.getAddress());
         }
 
         if (clientProfileUpdateRequest.getCity() != null && !clientProfileUpdateRequest.getCity().equals(existingProfile.getCity())) {
-            String beforeValue = existingProfile.getCity();
-            String afterValue = clientProfileUpdateRequest.getCity();
-            existingProfile.setCity(afterValue);
-            String remarks = String.format("City changed from %s to %s.", beforeValue, afterValue);
-            loggingService.sendUpdateLog(userId, clientId.toString(), "City", beforeValue, afterValue, remarks);
+            changedFields.add("City");
+            beforeValues.add(existingProfile.getCity());
+            afterValues.add(clientProfileUpdateRequest.getCity());
+            existingProfile.setCity(clientProfileUpdateRequest.getCity());
         }
 
         if (clientProfileUpdateRequest.getState() != null && !clientProfileUpdateRequest.getState().equals(existingProfile.getState())) {
-            String beforeValue = existingProfile.getState();
-            String afterValue = clientProfileUpdateRequest.getState();
-            existingProfile.setState(afterValue);
-            String remarks = String.format("State changed from %s to %s.", beforeValue, afterValue);
-            loggingService.sendUpdateLog(userId, clientId.toString(), "State", beforeValue, afterValue, remarks);
+            changedFields.add("State");
+            beforeValues.add(existingProfile.getState());
+            afterValues.add(clientProfileUpdateRequest.getState());
+            existingProfile.setState(clientProfileUpdateRequest.getState());
         }
 
         if (clientProfileUpdateRequest.getCountry() != null && !clientProfileUpdateRequest.getCountry().equals(existingProfile.getCountry())) {
-            String beforeValue = existingProfile.getCountry();
-            String afterValue = clientProfileUpdateRequest.getCountry();
-            existingProfile.setCountry(afterValue);
-            String remarks = String.format("Country changed from %s to %s.", beforeValue, afterValue);
-            loggingService.sendUpdateLog(userId, clientId.toString(), "Country", beforeValue, afterValue, remarks);
+            changedFields.add("Country");
+            beforeValues.add(existingProfile.getCountry());
+            afterValues.add(clientProfileUpdateRequest.getCountry());
+            existingProfile.setCountry(clientProfileUpdateRequest.getCountry());
         }
 
         if (clientProfileUpdateRequest.getPostalCode() != null && !clientProfileUpdateRequest.getPostalCode().equals(existingProfile.getPostalCode())) {
-            String beforeValue = existingProfile.getPostalCode();
-            String afterValue = clientProfileUpdateRequest.getPostalCode();
-            existingProfile.setPostalCode(afterValue);
-            String remarks = String.format("Postal code changed from %s to %s.", beforeValue, afterValue);
-            loggingService.sendUpdateLog(userId, clientId.toString(), "Postal Code", beforeValue, afterValue, remarks);
+            changedFields.add("Postal Code");
+            beforeValues.add(existingProfile.getPostalCode());
+            afterValues.add(clientProfileUpdateRequest.getPostalCode());
+            existingProfile.setPostalCode(clientProfileUpdateRequest.getPostalCode());
+        }
+
+        if (!changedFields.isEmpty()) {
+            String fieldNames = String.join(" | ", changedFields);
+            String beforeValue = String.join(" | ", beforeValues);
+            String afterValue = String.join(" | ", afterValues);
+            String remarks = String.format("Updated fields: %s", fieldNames);
+
+            loggingService.sendUpdateLog(userId, clientId.toString(), fieldNames, beforeValue, afterValue, remarks);
         }
 
         ClientProfile updated = clientProfileRepository.save(existingProfile);
         return mapToClientProfileResponse(updated);
     }
+
 
     public ClientStatusResponse updateClientStatus(UUID clientId, boolean activate) {
         ClientProfile clientProfile = clientProfileRepository.findById(clientId)

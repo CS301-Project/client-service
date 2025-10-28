@@ -6,6 +6,7 @@ import com.bank.crm.clientservice.models.ClientProfile;
 import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 import com.bank.crm.clientservice.models.enums.GenderTypes;
 import com.bank.crm.clientservice.repositories.ClientProfileRepository;
+import com.bank.crm.clientservice.services.LoggingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +39,10 @@ import jakarta.persistence.EntityManager;
 @Testcontainers
 @Import(TestcontainersConfiguration.class)
 @AutoConfigureMockMvc(addFilters = false)
-@SpringBootTest(properties = "spring.profiles.active=test")
+@SpringBootTest(properties = {
+        "spring.profiles.active=test",
+        "aws.sqs.logging-queue-url=http://localhost:4566/000000000000/test-queue"
+})
 class ClientProfileIT {
 
     @Autowired
@@ -52,6 +56,11 @@ class ClientProfileIT {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private LoggingService loggingService;
+
+
 
     @Test
     void shouldCreateClientSuccessfully() throws Exception {
