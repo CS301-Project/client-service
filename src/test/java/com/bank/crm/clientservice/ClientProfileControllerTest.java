@@ -55,7 +55,7 @@ class ClientProfileControllerTest {
                 .postalCode(request.getPostalCode())
                 .build();
 
-        Mockito.when(clientProfileService.createClientProfile(any(ClientProfileCreateRequest.class)))
+        Mockito.when(clientProfileService.createClientProfile(any(ClientProfileCreateRequest.class), anyString()))
                 .thenReturn(savedClient);
 
         mockMvc.perform(post("/client-profile")
@@ -84,7 +84,7 @@ class ClientProfileControllerTest {
     void shouldReturnBadRequest_WhenServiceThrowsNonUniqueFieldException() throws Exception {
         ClientProfileCreateRequest request = TestDataFactory.validClientProfileCreateRequest();
 
-        Mockito.when(clientProfileService.createClientProfile(any(ClientProfileCreateRequest.class)))
+        Mockito.when(clientProfileService.createClientProfile(any(ClientProfileCreateRequest.class), anyString()))
                 .thenThrow(new NonUniqueFieldException(new String[]{"emailAddress", "phoneNumber"}));
 
         mockMvc.perform(post("/client-profile")
@@ -100,7 +100,7 @@ class ClientProfileControllerTest {
     void shouldReturnOkWhenUpdateSuccessful() throws Exception {
         UUID clientId = UUID.randomUUID();
 
-        when(clientProfileService.updateClientProfile(eq(clientId), any(ClientProfileUpdateRequest.class)))
+        when(clientProfileService.updateClientProfile(eq(clientId), any(ClientProfileUpdateRequest.class), anyString()))
                 .thenReturn(new ClientProfileResponse());
 
         ClientProfileUpdateRequest requestDto = new ClientProfileUpdateRequest();
@@ -116,7 +116,7 @@ class ClientProfileControllerTest {
     void shouldReturnNotFoundWhenClientNotFoundOnUpdate() throws Exception {
         UUID clientId = UUID.randomUUID();
 
-        when(clientProfileService.updateClientProfile(eq(clientId), any(ClientProfileUpdateRequest.class)))
+        when(clientProfileService.updateClientProfile(eq(clientId), any(ClientProfileUpdateRequest.class), anyString()))
                 .thenThrow(new ClientNotFoundException(clientId));
 
         ClientProfileUpdateRequest requestDto = new ClientProfileUpdateRequest();
@@ -146,7 +146,7 @@ class ClientProfileControllerTest {
     void shouldReturnBadRequestWhenServiceThrowsNonUniqueFieldExceptionOnUpdate() throws Exception {
         UUID clientId = UUID.randomUUID();
 
-        when(clientProfileService.updateClientProfile(eq(clientId), any(ClientProfileUpdateRequest.class)))
+        when(clientProfileService.updateClientProfile(eq(clientId), any(ClientProfileUpdateRequest.class), anyString()))
                 .thenThrow(new NonUniqueFieldException(new String[]{"firstName", "email"}));
 
         ClientProfileUpdateRequest requestDto = new ClientProfileUpdateRequest();
@@ -239,7 +239,7 @@ class ClientProfileControllerTest {
     @Test
     void shouldReturnOkWhenDeleteSuccessful() throws Exception {
         UUID clientId = UUID.randomUUID();
-        doNothing().when(clientProfileService).deleteClientProfile(clientId);
+        doNothing().when(clientProfileService).deleteClientProfile(eq(clientId), anyString());
         mockMvc.perform(delete("/client-profile/" + clientId))
                 .andExpect(status().isOk());
     }
@@ -248,7 +248,7 @@ class ClientProfileControllerTest {
     void shouldReturnNotFoundWhenClientProfileNotFoundOnDelete() throws Exception {
         UUID clientId = UUID.randomUUID();
         doThrow(new ClientNotFoundException(clientId))
-                .when(clientProfileService).deleteClientProfile(clientId);
+                .when(clientProfileService).deleteClientProfile(eq(clientId), anyString());
         mockMvc.perform(delete("/client-profile/" + clientId))
                 .andExpect(status().isNotFound());
     }

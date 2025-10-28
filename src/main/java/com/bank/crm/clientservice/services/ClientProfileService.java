@@ -12,6 +12,7 @@ import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 import com.bank.crm.clientservice.models.enums.GenderTypes;
 import com.bank.crm.clientservice.repositories.ClientProfileRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -21,8 +22,9 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class ClientProfileService {
     private final ClientProfileRepository clientProfileRepository;
+    private final LoggingService loggingService;
 
-    public ClientProfileResponse createClientProfile( ClientProfileCreateRequest clientProfileCreateRequest) {
+    public ClientProfileResponse createClientProfile( ClientProfileCreateRequest clientProfileCreateRequest, String userId) {
         validateEmailAndPhoneUniqueness(clientProfileCreateRequest);
         ClientProfile clientProfile = ClientProfile.builder()
                 .firstName(clientProfileCreateRequest.getFirstName())
@@ -40,12 +42,35 @@ public class ClientProfileService {
                 .build();
 
         ClientProfile saved = clientProfileRepository.save(clientProfile);
+
+        //Create remarks for logging
+        String remarks = String.format(
+                "Client profile created: Name - %s %s, Email - %s, Phone - %s, Status - %s under Agent ID - %s",
+                clientProfile.getFirstName(),
+                clientProfile.getLastName(),
+                clientProfile.getEmailAddress(),
+                clientProfile.getPhoneNumber(),
+                clientProfile.getStatus(),
+                userId
+        );
+
+        loggingService.sendCreateLog(userId, saved.getClientId().toString(), remarks);
+
         return mapToClientProfileResponse(saved);
     }
 
-    public void deleteClientProfile(UUID clientId) {
+    public void deleteClientProfile(UUID clientId, String userId) {
         var existingProfile = getClientProfile(clientId);
         existingProfile.setStatus(ClientStatusTypes.INACTIVE);
+
+        String remarks = String.format(
+                "Client profile with ID %s deleted by agent %s.",
+                clientId,
+                userId
+        );
+
+        loggingService.sendDeleteLog(userId, clientId.toString(), remarks);
+
         clientProfileRepository.save(existingProfile);
     }
 
@@ -55,9 +80,18 @@ public class ClientProfileService {
                 .orElseThrow(() -> new ClientNotFoundException(clientId));
     }
 
-    public List<ClientProfile> getClientProfiles(List<UUID> clientIds) {
+    public List<ClientProfile> getClientProfiles(List<UUID> clientIds, String userId) {
+        String remarks = String.format(
+                "Batch retrieval of client profiles for IDs: %s by agent %s.",
+                clientIds,
+                userId
+        );
+
+        loggingService.sendReadLog(userId, clientIds.toString(), remarks);
+
         return clientIds.stream()
                 .map(this::getClientProfile)
+                .filter(profile -> profile.getStatus() != ClientStatusTypes.INACTIVE)
                 .toList();
     }
 
@@ -67,13 +101,107 @@ public class ClientProfileService {
                 .toList();
     }
 
-    public ClientProfileResponse updateClientProfile(UUID clientId, ClientProfileUpdateRequest clientProfileUpdateRequest) {
+    public ClientProfileResponse updateClientProfile(UUID clientId, ClientProfileUpdateRequest clientProfileUpdateRequest, String userId) {
         var existingProfile = getClientProfile(clientId);
         validateEmailAndPhoneUniqueness(clientId, clientProfileUpdateRequest);
-        mergeClientProfile(existingProfile, clientProfileUpdateRequest);
+
+        List<String> changedFields = new ArrayList<>();
+        List<String> beforeValues = new ArrayList<>();
+        List<String> afterValues = new ArrayList<>();
+
+        if (clientProfileUpdateRequest.getFirstName() != null && !clientProfileUpdateRequest.getFirstName().equals(existingProfile.getFirstName())) {
+            changedFields.add("First Name");
+            beforeValues.add(existingProfile.getFirstName());
+            afterValues.add(clientProfileUpdateRequest.getFirstName());
+            existingProfile.setFirstName(clientProfileUpdateRequest.getFirstName());
+        }
+
+        if (clientProfileUpdateRequest.getLastName() != null && !clientProfileUpdateRequest.getLastName().equals(existingProfile.getLastName())) {
+            changedFields.add("Last Name");
+            beforeValues.add(existingProfile.getLastName());
+            afterValues.add(clientProfileUpdateRequest.getLastName());
+            existingProfile.setLastName(clientProfileUpdateRequest.getLastName());
+        }
+
+        if (clientProfileUpdateRequest.getDateOfBirth() != null && !clientProfileUpdateRequest.getDateOfBirth().equals(existingProfile.getDateOfBirth())) {
+            changedFields.add("Date of Birth");
+            beforeValues.add(existingProfile.getDateOfBirth().toString());
+            afterValues.add(clientProfileUpdateRequest.getDateOfBirth().toString());
+            existingProfile.setDateOfBirth(clientProfileUpdateRequest.getDateOfBirth());
+        }
+
+        if (clientProfileUpdateRequest.getGender() != null) {
+            GenderTypes newGender = GenderTypes.fromString(clientProfileUpdateRequest.getGender());
+            if (!newGender.equals(existingProfile.getGender())) {
+                changedFields.add("Gender");
+                beforeValues.add(existingProfile.getGender().toString());
+                afterValues.add(newGender.toString());
+                existingProfile.setGender(newGender);
+            }
+        }
+
+        if (clientProfileUpdateRequest.getEmailAddress() != null && !clientProfileUpdateRequest.getEmailAddress().equals(existingProfile.getEmailAddress())) {
+            changedFields.add("Email Address");
+            beforeValues.add(existingProfile.getEmailAddress());
+            afterValues.add(clientProfileUpdateRequest.getEmailAddress());
+            existingProfile.setEmailAddress(clientProfileUpdateRequest.getEmailAddress());
+        }
+
+        if (clientProfileUpdateRequest.getPhoneNumber() != null && !clientProfileUpdateRequest.getPhoneNumber().equals(existingProfile.getPhoneNumber())) {
+            changedFields.add("Phone Number");
+            beforeValues.add(existingProfile.getPhoneNumber());
+            afterValues.add(clientProfileUpdateRequest.getPhoneNumber());
+            existingProfile.setPhoneNumber(clientProfileUpdateRequest.getPhoneNumber());
+        }
+
+        if (clientProfileUpdateRequest.getAddress() != null && !clientProfileUpdateRequest.getAddress().equals(existingProfile.getAddress())) {
+            changedFields.add("Address");
+            beforeValues.add(existingProfile.getAddress());
+            afterValues.add(clientProfileUpdateRequest.getAddress());
+            existingProfile.setAddress(clientProfileUpdateRequest.getAddress());
+        }
+
+        if (clientProfileUpdateRequest.getCity() != null && !clientProfileUpdateRequest.getCity().equals(existingProfile.getCity())) {
+            changedFields.add("City");
+            beforeValues.add(existingProfile.getCity());
+            afterValues.add(clientProfileUpdateRequest.getCity());
+            existingProfile.setCity(clientProfileUpdateRequest.getCity());
+        }
+
+        if (clientProfileUpdateRequest.getState() != null && !clientProfileUpdateRequest.getState().equals(existingProfile.getState())) {
+            changedFields.add("State");
+            beforeValues.add(existingProfile.getState());
+            afterValues.add(clientProfileUpdateRequest.getState());
+            existingProfile.setState(clientProfileUpdateRequest.getState());
+        }
+
+        if (clientProfileUpdateRequest.getCountry() != null && !clientProfileUpdateRequest.getCountry().equals(existingProfile.getCountry())) {
+            changedFields.add("Country");
+            beforeValues.add(existingProfile.getCountry());
+            afterValues.add(clientProfileUpdateRequest.getCountry());
+            existingProfile.setCountry(clientProfileUpdateRequest.getCountry());
+        }
+
+        if (clientProfileUpdateRequest.getPostalCode() != null && !clientProfileUpdateRequest.getPostalCode().equals(existingProfile.getPostalCode())) {
+            changedFields.add("Postal Code");
+            beforeValues.add(existingProfile.getPostalCode());
+            afterValues.add(clientProfileUpdateRequest.getPostalCode());
+            existingProfile.setPostalCode(clientProfileUpdateRequest.getPostalCode());
+        }
+
+        if (!changedFields.isEmpty()) {
+            String fieldNames = String.join(" | ", changedFields);
+            String beforeValue = String.join(" | ", beforeValues);
+            String afterValue = String.join(" | ", afterValues);
+            String remarks = String.format("Updated fields: %s", fieldNames);
+
+            loggingService.sendUpdateLog(userId, clientId.toString(), fieldNames, beforeValue, afterValue, remarks);
+        }
+
         ClientProfile updated = clientProfileRepository.save(existingProfile);
         return mapToClientProfileResponse(updated);
     }
+
 
     public ClientStatusResponse updateClientStatus(UUID clientId, boolean activate) {
         ClientProfile clientProfile = clientProfileRepository.findById(clientId)
@@ -90,19 +218,6 @@ public class ClientProfileService {
         return new ClientStatusResponse(updated.getClientId(), updated.getStatus().name());
     }
 
-    private void mergeClientProfile(ClientProfile existing, ClientProfileUpdateRequest updateRequest) {
-        Optional.ofNullable(updateRequest.getFirstName()).ifPresent(existing::setFirstName);
-        Optional.ofNullable(updateRequest.getLastName()).ifPresent(existing::setLastName);
-        Optional.ofNullable(updateRequest.getDateOfBirth()).ifPresent(existing::setDateOfBirth);
-        Optional.ofNullable(updateRequest.getGender()).map(GenderTypes::fromString).ifPresent(existing::setGender);
-        Optional.ofNullable(updateRequest.getEmailAddress()).ifPresent(existing::setEmailAddress);
-        Optional.ofNullable(updateRequest.getPhoneNumber()).ifPresent(existing::setPhoneNumber);
-        Optional.ofNullable(updateRequest.getAddress()).ifPresent(existing::setAddress);
-        Optional.ofNullable(updateRequest.getCity()).ifPresent(existing::setCity);
-        Optional.ofNullable(updateRequest.getState()).ifPresent(existing::setState);
-        Optional.ofNullable(updateRequest.getCountry()).ifPresent(existing::setCountry);
-        Optional.ofNullable(updateRequest.getPostalCode()).ifPresent(existing::setPostalCode);
-    }
 
     private ClientProfileResponse mapToClientProfileResponse(ClientProfile clientProfile) {
         return ClientProfileResponse.builder()

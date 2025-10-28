@@ -8,6 +8,7 @@ import com.bank.crm.clientservice.models.ClientProfile;
 import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 import com.bank.crm.clientservice.repositories.ClientProfileRepository;
 import com.bank.crm.clientservice.services.ClientProfileService;
+import com.bank.crm.clientservice.services.LoggingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -25,11 +26,13 @@ public class ClientProfileServiceTest {
 
     private ClientProfileService clientProfileService;
     private ClientProfileRepository mockRepo;
+    private LoggingService mockLoggingService;
 
     @BeforeEach
     void setUp() {
         mockRepo = mock(ClientProfileRepository.class);
-        clientProfileService = new ClientProfileService(mockRepo);
+        mockLoggingService = mock(LoggingService.class);
+        clientProfileService = new ClientProfileService(mockRepo, mockLoggingService);
     }
 
     @Test
@@ -44,8 +47,9 @@ public class ClientProfileServiceTest {
             client.setStatus(ClientStatusTypes.PENDING);
             return client;
         });
-
-        ClientProfileResponse created = clientProfileService.createClientProfile(request);
+        doNothing().when(mockLoggingService)
+                .sendCreateLog(anyString(), anyString(), anyString());
+        ClientProfileResponse created = clientProfileService.createClientProfile(request, anyString());
 
         assertEquals("ValidFirst", created.getFirstName());
         assertEquals("ValidLast", created.getLastName());
@@ -60,7 +64,7 @@ public class ClientProfileServiceTest {
         when(mockRepo.existsByPhoneNumber(request.getPhoneNumber())).thenReturn(false);
 
         NonUniqueFieldException exception = assertThrows(NonUniqueFieldException.class,
-                () -> clientProfileService.createClientProfile(request));
+                () -> clientProfileService.createClientProfile(request, anyString()));
 
         assertArrayEquals(new String[]{"emailAddress"}, exception.getInvalidFields());
     }
@@ -73,7 +77,7 @@ public class ClientProfileServiceTest {
         when(mockRepo.existsByPhoneNumber(request.getPhoneNumber())).thenReturn(true);
 
         NonUniqueFieldException exception = assertThrows(NonUniqueFieldException.class,
-                () -> clientProfileService.createClientProfile(request));
+                () -> clientProfileService.createClientProfile(request, anyString()));
 
         assertArrayEquals(new String[]{"phoneNumber"}, exception.getInvalidFields());
     }
@@ -86,7 +90,7 @@ public class ClientProfileServiceTest {
         when(mockRepo.existsByPhoneNumber(request.getPhoneNumber())).thenReturn(true);
 
         NonUniqueFieldException exception = assertThrows(NonUniqueFieldException.class,
-                () -> clientProfileService.createClientProfile(request));
+                () -> clientProfileService.createClientProfile(request, anyString()));
 
         assertArrayEquals(new String[]{"emailAddress", "phoneNumber"}, exception.getInvalidFields());
     }
@@ -94,10 +98,7 @@ public class ClientProfileServiceTest {
     @Test
     void shouldUpdateClientProfileSuccessfully() {
         UUID clientId = UUID.randomUUID();
-        ClientProfile existing = new ClientProfile();
-        existing.setClientId(clientId);
-        existing.setFirstName("OldName");
-
+        ClientProfile existing = TestDataFactory.validClientProfile();
         when(mockRepo.findById(clientId)).thenReturn(Optional.of(existing));
         when(mockRepo.existsByEmailAddressAndClientIdNot("new@example.com", clientId)).thenReturn(false);
         when(mockRepo.existsByPhoneNumberAndClientIdNot("+6598765432", clientId)).thenReturn(false);
@@ -107,8 +108,9 @@ public class ClientProfileServiceTest {
         dto.setFirstName("NewName");
         dto.setEmailAddress("new@example.com");
         dto.setPhoneNumber("+6598765432");
-
-        ClientProfileResponse response = clientProfileService.updateClientProfile(clientId, dto);
+        doNothing().when(mockLoggingService)
+                .sendUpdateLog(anyString(), anyString(), anyString(), anyString(), anyString(), anyString());
+        ClientProfileResponse response = clientProfileService.updateClientProfile(clientId, dto, "test-user");
 
         assertEquals("NewName", response.getFirstName());
         assertEquals("new@example.com", response.getEmailAddress());
@@ -119,7 +121,7 @@ public class ClientProfileServiceTest {
     void shouldFailClientNotFoundOnUpdate() {
         ClientProfileUpdateRequest dto = validClientProfileUpdateRequest();
         assertThrows(ClientNotFoundException.class,
-                () -> clientProfileService.updateClientProfile(UUID.randomUUID(), dto));
+                () -> clientProfileService.updateClientProfile(UUID.randomUUID(), dto, "test-user"));
     }
 
     @Test
@@ -135,7 +137,7 @@ public class ClientProfileServiceTest {
         dto.setEmailAddress("existing@example.com");
 
         NonUniqueFieldException exception = assertThrows(NonUniqueFieldException.class,
-                () -> clientProfileService.updateClientProfile(clientId, dto));
+                () -> clientProfileService.updateClientProfile(clientId, dto, "test-user"));
         assertArrayEquals(new String[]{"emailAddress"}, exception.getInvalidFields());
     }
 
@@ -152,7 +154,7 @@ public class ClientProfileServiceTest {
         dto.setPhoneNumber("+6512345678");
 
         NonUniqueFieldException exception = assertThrows(NonUniqueFieldException.class,
-                () -> clientProfileService.updateClientProfile(clientId, dto));
+                () -> clientProfileService.updateClientProfile(clientId, dto, "test-user"));
         assertArrayEquals(new String[]{"phoneNumber"}, exception.getInvalidFields());
     }
 
@@ -171,7 +173,7 @@ public class ClientProfileServiceTest {
         dto.setPhoneNumber("+6512345678");
 
         NonUniqueFieldException exception = assertThrows(NonUniqueFieldException.class,
-                () -> clientProfileService.updateClientProfile(clientId, dto));
+                () -> clientProfileService.updateClientProfile(clientId, dto, "test-user"));
         assertArrayEquals(new String[]{"emailAddress", "phoneNumber"}, exception.getInvalidFields());
     }
 
@@ -190,14 +192,14 @@ public class ClientProfileServiceTest {
         ClientProfileUpdateRequest dto = new ClientProfileUpdateRequest();
         dto.setFirstName(null);
 
-        ClientProfileResponse response = clientProfileService.updateClientProfile(clientId, dto);
+        ClientProfileResponse response = clientProfileService.updateClientProfile(clientId, dto, "test-user");
         assertEquals("OldName", response.getFirstName());
     }
 
     @Test
     void shouldNotFailUniquenessIfBelongsToSameClient() {
         UUID clientId = UUID.randomUUID();
-        ClientProfile existing = new ClientProfile();
+        ClientProfile existing = TestDataFactory.validClientProfile();
         existing.setClientId(clientId);
         existing.setEmailAddress("existing@example.com");
         existing.setPhoneNumber("+6512345678");
@@ -210,8 +212,9 @@ public class ClientProfileServiceTest {
         ClientProfileUpdateRequest dto = validClientProfileUpdateRequest();
         dto.setEmailAddress("existing@example.com");
         dto.setPhoneNumber("+6512345678");
-
-        ClientProfileResponse response = clientProfileService.updateClientProfile(clientId, dto);
+        doNothing().when(mockLoggingService)
+                .sendUpdateLog(anyString(), anyString(), anyString(), anyString(), anyString(), anyString());
+        ClientProfileResponse response = clientProfileService.updateClientProfile(clientId, dto, "test-user");
         assertEquals("existing@example.com", response.getEmailAddress());
         assertEquals("+6512345678", response.getPhoneNumber());
     }
@@ -320,7 +323,7 @@ public class ClientProfileServiceTest {
         existing.setClientId(clientId);
         when(mockRepo.findById(clientId)).thenReturn(Optional.of(existing));
         when(mockRepo.save(existing)).thenReturn(existing);
-        clientProfileService.deleteClientProfile(clientId);
+        clientProfileService.deleteClientProfile(clientId, anyString());
         assertEquals(ClientStatusTypes.INACTIVE, existing.getStatus());
     }
 }

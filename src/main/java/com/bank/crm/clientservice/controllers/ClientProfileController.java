@@ -27,18 +27,20 @@ public class ClientProfileController {
 
     @PostMapping
     public ResponseEntity<ClientProfileResponse> createClient(
-            @Valid @RequestBody ClientProfileCreateRequest clientProfileCreateRequest
+            @Valid @RequestBody ClientProfileCreateRequest clientProfileCreateRequest,
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "SYSTEM") String userId
     ) {
-        ClientProfileResponse response = clientProfileService.createClientProfile(clientProfileCreateRequest);
+        ClientProfileResponse response = clientProfileService.createClientProfile(clientProfileCreateRequest, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/{clientId}")
     public ResponseEntity<ClientProfileResponse> updateClientProfile(
             @PathVariable UUID clientId,
-            @Valid @RequestBody ClientProfileUpdateRequest clientProfileUpdateRequest
+            @Valid @RequestBody ClientProfileUpdateRequest clientProfileUpdateRequest,
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "SYSTEM") String userId
     ) {
-        ClientProfileResponse updatedClient = clientProfileService.updateClientProfile(clientId, clientProfileUpdateRequest);
+        ClientProfileResponse updatedClient = clientProfileService.updateClientProfile(clientId, clientProfileUpdateRequest, userId);
         return ResponseEntity.ok(updatedClient);
     }
 
@@ -52,8 +54,11 @@ public class ClientProfileController {
     }
 
     @DeleteMapping("/{clientId}")
-    public ResponseEntity<String> deleteClientProfile(@Valid @PathVariable UUID clientId) {
-        clientProfileService.deleteClientProfile(clientId);
+    public ResponseEntity<String> deleteClientProfile(
+            @Valid @PathVariable UUID clientId,
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "SYSTEM") String userId
+    ) {
+        clientProfileService.deleteClientProfile(clientId, userId);
         return ResponseEntity.ok("Client profile deleted successfully");
     }
 
@@ -71,8 +76,8 @@ public class ClientProfileController {
     }
 
     @PostMapping("/batch")
-    public ResponseEntity<List<ClientProfile>> getClientProfiles(@RequestBody List<UUID> clientIds) {
-        List<ClientProfile> clientProfiles = clientProfileService.getClientProfiles(clientIds);
+    public ResponseEntity<List<ClientProfile>> getClientProfiles(@RequestBody List<UUID> clientIds, String userId) {
+        List<ClientProfile> clientProfiles = clientProfileService.getClientProfiles(clientIds, userId);
         return ResponseEntity.ok(clientProfiles);
     }
 
