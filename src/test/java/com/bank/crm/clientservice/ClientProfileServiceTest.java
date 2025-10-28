@@ -8,6 +8,7 @@ import com.bank.crm.clientservice.models.ClientProfile;
 import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 import com.bank.crm.clientservice.repositories.ClientProfileRepository;
 import com.bank.crm.clientservice.services.ClientProfileService;
+import com.bank.crm.clientservice.services.LoggingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -25,11 +26,13 @@ public class ClientProfileServiceTest {
 
     private ClientProfileService clientProfileService;
     private ClientProfileRepository mockRepo;
+    private LoggingService mockLoggingService;
 
     @BeforeEach
     void setUp() {
         mockRepo = mock(ClientProfileRepository.class);
-        clientProfileService = new ClientProfileService(mockRepo);
+        mockLoggingService = mock(LoggingService.class);
+        clientProfileService = new ClientProfileService(mockRepo, mockLoggingService);
     }
 
     @Test
@@ -44,7 +47,8 @@ public class ClientProfileServiceTest {
             client.setStatus(ClientStatusTypes.PENDING);
             return client;
         });
-
+        doNothing().when(mockLoggingService)
+                .sendCreateLog(anyString(), anyString(), anyString());
         ClientProfileResponse created = clientProfileService.createClientProfile(request, anyString());
 
         assertEquals("ValidFirst", created.getFirstName());
@@ -94,10 +98,7 @@ public class ClientProfileServiceTest {
     @Test
     void shouldUpdateClientProfileSuccessfully() {
         UUID clientId = UUID.randomUUID();
-        ClientProfile existing = new ClientProfile();
-        existing.setClientId(clientId);
-        existing.setFirstName("OldName");
-
+        ClientProfile existing = TestDataFactory.validClientProfile();
         when(mockRepo.findById(clientId)).thenReturn(Optional.of(existing));
         when(mockRepo.existsByEmailAddressAndClientIdNot("new@example.com", clientId)).thenReturn(false);
         when(mockRepo.existsByPhoneNumberAndClientIdNot("+6598765432", clientId)).thenReturn(false);
@@ -107,7 +108,8 @@ public class ClientProfileServiceTest {
         dto.setFirstName("NewName");
         dto.setEmailAddress("new@example.com");
         dto.setPhoneNumber("+6598765432");
-
+        doNothing().when(mockLoggingService)
+                .sendUpdateLog(anyString(), anyString(), anyString(), anyString(), anyString(), anyString());
         ClientProfileResponse response = clientProfileService.updateClientProfile(clientId, dto, "test-user");
 
         assertEquals("NewName", response.getFirstName());
@@ -197,7 +199,7 @@ public class ClientProfileServiceTest {
     @Test
     void shouldNotFailUniquenessIfBelongsToSameClient() {
         UUID clientId = UUID.randomUUID();
-        ClientProfile existing = new ClientProfile();
+        ClientProfile existing = TestDataFactory.validClientProfile();
         existing.setClientId(clientId);
         existing.setEmailAddress("existing@example.com");
         existing.setPhoneNumber("+6512345678");
@@ -210,7 +212,8 @@ public class ClientProfileServiceTest {
         ClientProfileUpdateRequest dto = validClientProfileUpdateRequest();
         dto.setEmailAddress("existing@example.com");
         dto.setPhoneNumber("+6512345678");
-
+        doNothing().when(mockLoggingService)
+                .sendUpdateLog(anyString(), anyString(), anyString(), anyString(), anyString(), anyString());
         ClientProfileResponse response = clientProfileService.updateClientProfile(clientId, dto, "test-user");
         assertEquals("existing@example.com", response.getEmailAddress());
         assertEquals("+6512345678", response.getPhoneNumber());

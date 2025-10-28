@@ -22,9 +22,7 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class ClientProfileService {
     private final ClientProfileRepository clientProfileRepository;
-
-    @Autowired
-    private LoggingService loggingService;
+    private final LoggingService loggingService;
 
     public ClientProfileResponse createClientProfile( ClientProfileCreateRequest clientProfileCreateRequest, String userId) {
         validateEmailAndPhoneUniqueness(clientProfileCreateRequest);
