@@ -8,9 +8,11 @@ import com.bank.crm.clientservice.models.ClientProfile;
 import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 import com.bank.crm.clientservice.repositories.ClientProfileRepository;
 import com.bank.crm.clientservice.services.ClientProfileService;
+import com.bank.crm.clientservice.services.LoggingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,12 +27,16 @@ public class ClientProfileServiceTest {
 
     private ClientProfileService clientProfileService;
     private ClientProfileRepository mockRepo;
+    private LoggingService mockLoggingService;
+
 
     @BeforeEach
     void setUp() {
         mockRepo = mock(ClientProfileRepository.class);
-        clientProfileService = new ClientProfileService(mockRepo);
+        mockLoggingService = mock(LoggingService.class);
+        clientProfileService = new ClientProfileService(mockRepo, mockLoggingService);
     }
+
 
     @Test
     void shouldCreateClientSuccessfully_WhenEmailAndPhoneUnique() {
@@ -97,6 +103,16 @@ public class ClientProfileServiceTest {
         ClientProfile existing = new ClientProfile();
         existing.setClientId(clientId);
         existing.setFirstName("OldName");
+        existing.setDateOfBirth(LocalDate.of(1990, 1, 1));
+        existing.setGender(com.bank.crm.clientservice.models.enums.GenderTypes.MALE);
+        existing.setLastName("OldLast");
+        existing.setEmailAddress("old@example.com");
+        existing.setPhoneNumber("+6512345678");
+        existing.setAddress("Old Address");
+        existing.setCity("Old City");
+        existing.setState("Old State");
+        existing.setCountry("Old Country");
+        existing.setPostalCode("00000");
 
         when(mockRepo.findById(clientId)).thenReturn(Optional.of(existing));
         when(mockRepo.existsByEmailAddressAndClientIdNot("new@example.com", clientId)).thenReturn(false);
@@ -114,6 +130,38 @@ public class ClientProfileServiceTest {
         assertEquals("new@example.com", response.getEmailAddress());
         assertEquals("+6598765432", response.getPhoneNumber());
     }
+
+    @Test
+    void shouldNotFailUniquenessIfBelongsToSameClient() {
+        UUID clientId = UUID.randomUUID();
+        ClientProfile existing = new ClientProfile();
+        existing.setClientId(clientId);
+        existing.setEmailAddress("existing@example.com");
+        existing.setPhoneNumber("+6512345678");
+        existing.setDateOfBirth(LocalDate.of(1990, 1, 1));
+        existing.setGender(com.bank.crm.clientservice.models.enums.GenderTypes.FEMALE);
+        existing.setFirstName("FirstName");
+        existing.setLastName("LastName");
+        existing.setAddress("Address");
+        existing.setCity("City");
+        existing.setState("State");
+        existing.setCountry("Country");
+        existing.setPostalCode("12345");
+
+        when(mockRepo.findById(clientId)).thenReturn(Optional.of(existing));
+        when(mockRepo.existsByEmailAddressAndClientIdNot("existing@example.com", clientId)).thenReturn(false);
+        when(mockRepo.existsByPhoneNumberAndClientIdNot("+6512345678", clientId)).thenReturn(false);
+        when(mockRepo.save(existing)).thenReturn(existing);
+
+        ClientProfileUpdateRequest dto = validClientProfileUpdateRequest();
+        dto.setEmailAddress("existing@example.com");
+        dto.setPhoneNumber("+6512345678");
+
+        ClientProfileResponse response = clientProfileService.updateClientProfile(clientId, dto, "test-user");
+        assertEquals("existing@example.com", response.getEmailAddress());
+        assertEquals("+6512345678", response.getPhoneNumber());
+    }
+
 
     @Test
     void shouldFailClientNotFoundOnUpdate() {
@@ -194,27 +242,6 @@ public class ClientProfileServiceTest {
         assertEquals("OldName", response.getFirstName());
     }
 
-    @Test
-    void shouldNotFailUniquenessIfBelongsToSameClient() {
-        UUID clientId = UUID.randomUUID();
-        ClientProfile existing = new ClientProfile();
-        existing.setClientId(clientId);
-        existing.setEmailAddress("existing@example.com");
-        existing.setPhoneNumber("+6512345678");
-
-        when(mockRepo.findById(clientId)).thenReturn(Optional.of(existing));
-        when(mockRepo.existsByEmailAddressAndClientIdNot("existing@example.com", clientId)).thenReturn(false);
-        when(mockRepo.existsByPhoneNumberAndClientIdNot("+6512345678", clientId)).thenReturn(false);
-        when(mockRepo.save(existing)).thenReturn(existing);
-
-        ClientProfileUpdateRequest dto = validClientProfileUpdateRequest();
-        dto.setEmailAddress("existing@example.com");
-        dto.setPhoneNumber("+6512345678");
-
-        ClientProfileResponse response = clientProfileService.updateClientProfile(clientId, dto, "test-user");
-        assertEquals("existing@example.com", response.getEmailAddress());
-        assertEquals("+6512345678", response.getPhoneNumber());
-    }
 
     @Test
     void shouldGetClientProfileSuccessfully() {
