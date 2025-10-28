@@ -76,8 +76,8 @@ public class ClientProfileController {
     }
 
     @PostMapping("/batch")
-    public ResponseEntity<List<ClientProfile>> getClientProfiles(@RequestBody List<UUID> clientIds, String userId) {
-        List<ClientProfile> clientProfiles = clientProfileService.getClientProfiles(clientIds, userId);
+    public ResponseEntity<List<ClientProfile>> getClientProfiles(String userId) {
+        List<ClientProfile> clientProfiles = clientProfileService.getClientProfiles(userId);
         return ResponseEntity.ok(clientProfiles);
     }
 
