@@ -142,7 +142,7 @@ jobs:
         echo "Resetting deployment configuration to 100/200..."
         aws ecs update-service \
           --cluster ${{ env.ECS_CLUSTER }} \
-          --service ${{ env.ECS_SERVICE }} \ 
+          --service ${{ env.ECS_SERVICE }} \
           --deployment-configuration "minimumHealthyPercent=100,maximumPercent=200"
 
     - name: Deployment Summary
