@@ -1,13 +1,16 @@
 name: Build and Deploy
+
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
+
 env:
   AWS_REGION: ap-southeast-1
   ECR_REPOSITORY: 200842396352.dkr.ecr.ap-southeast-1.amazonaws.com/client-service
   ECS_CLUSTER: client-ecs-cluster
   ECS_SERVICE: client-service
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -20,11 +23,11 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
-    
+
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
-    
+
     - name: Build and push
       id: build-image
       env:
@@ -54,11 +57,12 @@ jobs:
         fi
         
         echo "image=$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-    
+
     - name: Deploy to ECS (only if exists)
       run: |
         echo "Checking if ECS service exists..."
         
+        # Check if service exists and is ACTIVE
         SERVICE_STATUS=$(aws ecs describe-services \
           --cluster ${{ env.ECS_CLUSTER }} \
           --services ${{ env.ECS_SERVICE }} \
@@ -66,7 +70,7 @@ jobs:
           --output text 2>/dev/null || echo "NONE")
         
         if [ "$SERVICE_STATUS" = "ACTIVE" ]; then
-          echo "ECS service found and active. Starting deployment..."
+          echo "ECS service found and active. Deploying new image..."
           
           # Get current task definition
           TASK_DEF=$(aws ecs describe-services \
@@ -83,7 +87,7 @@ jobs:
             --query 'taskDefinition' > task-def.json
           
           # Create new task definition with updated image
-          NEW_TASK_DEF=$(jq --arg IMAGE "${{ env.ECR_REPOSITORY }}:${{ github.sha }}" '
+          jq --arg IMAGE "${{ env.ECR_REPOSITORY }}:${{ github.sha }}" '
             {
               family,
               taskRoleArn,
@@ -94,17 +98,27 @@ jobs:
               placementConstraints,
               requiresCompatibilities,
               cpu,
-              memory
+              memory,
+              pidMode,
+              ipcMode,
+              proxyConfiguration,
+              inferenceAccelerators,
+              ephemeralStorage,
+              runtimePlatform
             } | 
             with_entries(select(.value != null)) |
             .containerDefinitions[0].image = $IMAGE
-          ' task-def.json | \
-          aws ecs register-task-definition --cli-input-json file:///dev/stdin --query 'taskDefinition.taskDefinitionArn' --output text)
+          ' task-def.json > task-def-new.json
           
-          echo "New task definition registered: $NEW_TASK_DEF"
+          # Register new task definition
+          NEW_TASK_DEF=$(aws ecs register-task-definition \
+            --cli-input-json file://task-def-new.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
           
-          # Deploy with minimumHealthyPercent=50 to avoid port conflicts
-          echo "Deploying new task definition with rolling update..."
+          echo "New task definition: $NEW_TASK_DEF"
+          
+          # Update service
           aws ecs update-service \
             --cluster ${{ env.ECS_CLUSTER }} \
             --service ${{ env.ECS_SERVICE }} \
@@ -112,16 +126,16 @@ jobs:
             --deployment-configuration "minimumHealthyPercent=50,maximumPercent=100" \
             --force-new-deployment
           
-          echo "Waiting for deployment to complete..."
+          echo "Deployment initiated. Waiting for service to stabilize..."
           aws ecs wait services-stable \
             --cluster ${{ env.ECS_CLUSTER }} \
             --services ${{ env.ECS_SERVICE }}
           
-          echo "✅ Deployment complete!"
+          echo "✅ Deployment complete"
         else
           echo "⚠️ ECS service not found or not active (status: $SERVICE_STATUS). Skipping deployment."
         fi
-    
+
     - name: Reset ECS deployment configuration
       if: success()
       run: |
@@ -132,24 +146,16 @@ jobs:
           --deployment-configuration "minimumHealthyPercent=100,maximumPercent=200"
 
     - name: Deployment Summary
-      if: always()
       run: |
         echo "### 🚀 Deployment Info" >> $GITHUB_STEP_SUMMARY
-        echo "- **Image:** ${{ env.ECR_REPOSITORY }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Region:** ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Cluster:** ${{ env.ECS_CLUSTER }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Service:** ${{ env.ECS_SERVICE }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-        
-        SERVICE_CHECK=$(aws ecs describe-services \
-          --cluster ${{ env.ECS_CLUSTER }} \
-          --services ${{ env.ECS_SERVICE }} \
-          --query 'services[0].status' \
-          --output text 2>/dev/null || echo "NOT_FOUND")
-        
-        if [ "$SERVICE_CHECK" = "ACTIVE" ]; then
-          echo "- ✅ **ECS deployment successful**" >> $GITHUB_STEP_SUMMARY
+        echo "- **Image:** ${ECR_REPOSITORY}:${GITHUB_SHA}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Region:** ${AWS_REGION}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Cluster:** ${ECS_CLUSTER}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Service:** ${ECS_SERVICE}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit:** ${GITHUB_SHA}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Triggered by:** ${GITHUB_ACTOR}" >> $GITHUB_STEP_SUMMARY
+        if ! aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE >/dev/null 2>&1; then
+          echo "- ⚠️ **ECS deployment skipped** (Cluster or service not found)" >> $GITHUB_STEP_SUMMARY
         else
-          echo "- ⚠️ **ECS deployment skipped** (Service not found or not active)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **ECS deployment successful**" >> $GITHUB_STEP_SUMMARY
         fi
