@@ -12,7 +12,7 @@ import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 import com.bank.crm.clientservice.models.enums.GenderTypes;
 import com.bank.crm.clientservice.repositories.ClientProfileRepository;
 import lombok.RequiredArgsConstructor;
-//import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -23,9 +23,8 @@ import java.util.stream.Stream;
 public class ClientProfileService {
     private final ClientProfileRepository clientProfileRepository;
 
-//    @Autowired
-//    private LoggingService loggingService;
-    private final LoggingService loggingService;
+    @Autowired
+    private LoggingService loggingService;
 
     public ClientProfileResponse createClientProfile( ClientProfileCreateRequest clientProfileCreateRequest, String userId) {
         validateEmailAndPhoneUniqueness(clientProfileCreateRequest);
