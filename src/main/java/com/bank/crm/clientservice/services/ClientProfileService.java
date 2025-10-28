@@ -12,7 +12,6 @@ import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 import com.bank.crm.clientservice.models.enums.GenderTypes;
 import com.bank.crm.clientservice.repositories.ClientProfileRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -40,6 +39,8 @@ public class ClientProfileService {
                 .postalCode(clientProfileCreateRequest.getPostalCode())
                 .status(ClientStatusTypes.PENDING)
                 .build();
+
+        clientProfile.setAgent_id(userId);
 
         ClientProfile saved = clientProfileRepository.save(clientProfile);
 
@@ -80,19 +81,25 @@ public class ClientProfileService {
                 .orElseThrow(() -> new ClientNotFoundException(clientId));
     }
 
-    public List<ClientProfile> getClientProfiles(List<UUID> clientIds, String userId) {
+    public List<ClientProfile> getClientProfiles(String userId) {
         String remarks = String.format(
-                "Batch retrieval of client profiles for IDs: %s by agent %s.",
-                clientIds,
+                "Batch retrieval of client profiles under Agent %s.",
                 userId
         );
 
+         List<ClientProfile> clientProfiles =  clientProfileRepository.findAll().stream()
+                .filter(profile -> profile.getStatus() != ClientStatusTypes.INACTIVE)
+                .filter(profile -> profile.getAgent_id().equals(userId))
+                .toList();
+
+         List <String> clientIds = new ArrayList<>();
+            for (ClientProfile profile : clientProfiles) {
+                clientIds.add(profile.getClientId().toString());
+            }
+
         loggingService.sendReadLog(userId, clientIds.toString(), remarks);
 
-        return clientIds.stream()
-                .map(this::getClientProfile)
-                .filter(profile -> profile.getStatus() != ClientStatusTypes.INACTIVE)
-                .toList();
+        return clientProfiles;
     }
 
     public List<ClientProfile> getAllClientProfiles() {

@@ -81,4 +81,8 @@ public class ClientProfile {
     @Column(nullable = false)
     @NotNull
     private ClientStatusTypes status;
+
+    @Column(name = "agent_id", nullable = false, length = 36)
+    @NotNull
+    private String agent_id;
 }

@@ -39,6 +39,7 @@ public class TestDataFactory {
                 .country("MY")
                 .postalCode("12345")
                 .status(ClientStatusTypes.ACTIVE)
+                .agent_id("test-agent-id")
                 .build();
     }
 
