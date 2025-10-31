@@ -41,7 +41,10 @@ import jakarta.persistence.EntityManager;
 @AutoConfigureMockMvc(addFilters = false)
 @SpringBootTest(properties = {
         "spring.profiles.active=test",
-        "aws.sqs.logging-queue-url=http://localhost:4566/000000000000/test-queue"
+        "aws.sqs.logging-queue-url=http://localhost:4566/000000000000/test-queue",
+        "aws.sqs.verification_request_queue_url=http://localhost:4566/000000000000/test-verification-request-queue",
+        "aws.sqs.verification_results_queue_url=http://localhost:4566/000000000000/test-verification-results-queue",
+        "verification.polling.enabled=false"
 })
 class ClientProfileIT {
 
