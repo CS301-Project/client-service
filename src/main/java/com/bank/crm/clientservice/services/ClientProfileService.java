@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 public class ClientProfileService {
     private final ClientProfileRepository clientProfileRepository;
     private final LoggingService loggingService;
+    private final VerificationService verificationService;
 
     public ClientProfileResponse createClientProfile( ClientProfileCreateRequest clientProfileCreateRequest, String userId) {
         validateEmailAndPhoneUniqueness(clientProfileCreateRequest);
@@ -210,7 +211,7 @@ public class ClientProfileService {
     }
 
 
-    public ClientStatusResponse updateClientStatus(UUID clientId, boolean activate) {
+    public ClientStatusResponse updateClientStatus(UUID clientId, boolean activate, String userId) {
         ClientProfile clientProfile = clientProfileRepository.findById(clientId)
                 .orElseThrow(() -> new ClientNotFoundException(clientId));
 
@@ -222,8 +223,39 @@ public class ClientProfileService {
 
         ClientProfile updated = clientProfileRepository.save(clientProfile);
 
+        String remarks = String.format(
+                "Client status updated to %s by agent %s.",
+                updated.getStatus(),
+                userId
+        );
+        loggingService.sendUpdateLog(userId, clientId.toString(), "Status", ClientStatusTypes.PENDING.name(), updated.getStatus().name(), remarks);
+
         return new ClientStatusResponse(updated.getClientId(), updated.getStatus().name());
     }
+
+    public ClientStatusResponse initialiseAutoVerificationProcess(UUID clientId, String userId, String agentEmail, String clientEmail) {
+        ClientProfile clientProfile = clientProfileRepository.findById(clientId)
+                .orElseThrow(() -> new ClientNotFoundException(clientId));
+
+        if (clientProfile.getStatus() != ClientStatusTypes.PENDING) {
+            throw new ClientNotPendingException("Client status must be PENDING to verify");
+        }
+
+        // Send verification request to SQS
+        verificationService.sendVerificationRequest(clientId, userId, agentEmail, clientEmail);
+
+        String remarks = String.format(
+                "Auto-verification process initiated for client %s by agent %s. Client email: %s, Agent email: %s. Verification request sent to queue.",
+                clientId,
+                userId,
+                clientEmail,
+                agentEmail
+        );
+        loggingService.sendUpdateLog(userId, clientId.toString(), "Auto-Verification", "Not Started", "Initiated", remarks);
+
+        return new ClientStatusResponse(clientProfile.getClientId(), clientProfile.getStatus().name());
+    }
+
 
 
     private ClientProfileResponse mapToClientProfileResponse(ClientProfile clientProfile) {

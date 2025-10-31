@@ -9,6 +9,7 @@ import com.bank.crm.clientservice.models.enums.ClientStatusTypes;
 import com.bank.crm.clientservice.repositories.ClientProfileRepository;
 import com.bank.crm.clientservice.services.ClientProfileService;
 import com.bank.crm.clientservice.services.LoggingService;
+import com.bank.crm.clientservice.services.VerificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -27,12 +28,14 @@ public class ClientProfileServiceTest {
     private ClientProfileService clientProfileService;
     private ClientProfileRepository mockRepo;
     private LoggingService mockLoggingService;
+    private VerificationService mockVerificationService;
 
     @BeforeEach
     void setUp() {
         mockRepo = mock(ClientProfileRepository.class);
         mockLoggingService = mock(LoggingService.class);
-        clientProfileService = new ClientProfileService(mockRepo, mockLoggingService);
+        mockVerificationService = mock(VerificationService.class);
+        clientProfileService = new ClientProfileService(mockRepo, mockLoggingService, mockVerificationService);
     }
 
     @Test
@@ -247,7 +250,7 @@ public class ClientProfileServiceTest {
         when(mockRepo.findById(clientId)).thenReturn(Optional.of(client));
         when(mockRepo.save(client)).thenReturn(client);
 
-        ClientStatusResponse response = clientProfileService.updateClientStatus(clientId, true);
+        ClientStatusResponse response = clientProfileService.updateClientStatus(clientId, true, "test-user");
         assertEquals("ACTIVE", response.getStatus());
         assertEquals(clientId, response.getClientId());
     }
@@ -262,7 +265,7 @@ public class ClientProfileServiceTest {
         when(mockRepo.findById(clientId)).thenReturn(Optional.of(client));
         when(mockRepo.save(client)).thenReturn(client);
 
-        ClientStatusResponse response = clientProfileService.updateClientStatus(clientId, false);
+        ClientStatusResponse response = clientProfileService.updateClientStatus(clientId, false, "test-user");
         assertEquals("INACTIVE", response.getStatus());
         assertEquals(clientId, response.getClientId());
     }
@@ -277,7 +280,7 @@ public class ClientProfileServiceTest {
         when(mockRepo.findById(clientId)).thenReturn(Optional.of(client));
 
         ClientNotPendingException ex = assertThrows(ClientNotPendingException.class,
-                () -> clientProfileService.updateClientStatus(clientId, true));
+                () -> clientProfileService.updateClientStatus(clientId, true, "test-user"));
 
         assertEquals("Client status must be PENDING to verify", ex.getMessage());
     }
@@ -292,7 +295,7 @@ public class ClientProfileServiceTest {
         when(mockRepo.findById(clientId)).thenReturn(Optional.of(client));
 
         ClientNotPendingException ex = assertThrows(ClientNotPendingException.class,
-                () -> clientProfileService.updateClientStatus(clientId, true));
+                () -> clientProfileService.updateClientStatus(clientId, true, "test-user"));
 
         assertEquals("Client status must be PENDING to verify", ex.getMessage());
     }
@@ -303,7 +306,7 @@ public class ClientProfileServiceTest {
         when(mockRepo.findById(clientId)).thenReturn(Optional.empty());
 
         assertThrows(ClientNotFoundException.class,
-                () -> clientProfileService.updateClientStatus(clientId, true));
+                () -> clientProfileService.updateClientStatus(clientId, true, "test-user"));
     }
 
     void shouldFailClientStatusInactiveOnFetch() {
