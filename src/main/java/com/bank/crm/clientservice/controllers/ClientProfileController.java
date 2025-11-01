@@ -47,9 +47,22 @@ public class ClientProfileController {
     @PostMapping("/{clientId}/verify")
     public ResponseEntity<ClientStatusResponse> verifyClient(
             @PathVariable UUID clientId,
-            @Valid @RequestBody ClientStatusUpdateRequest request
+            @Valid @RequestBody ClientStatusUpdateRequest request,
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "SYSTEM") String userId
+
     ) {
-        ClientStatusResponse response = clientProfileService.updateClientStatus(clientId, request.getActivate());
+        ClientStatusResponse response = clientProfileService.updateClientStatus(clientId, request.getActivate(), userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{clientId}/autoVerify")
+    public ResponseEntity<ClientStatusResponse> autoVerifyClient(
+            @PathVariable UUID clientId,
+            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "SYSTEM") String userId,
+            @RequestHeader(value = "X-Agent-Email", required = false, defaultValue = "SYSTEM") String agentEmail,
+            @RequestHeader(value = "X-Client-Email", required = false, defaultValue = "SYSTEM") String clientEmail
+    ) {
+        ClientStatusResponse response = clientProfileService.initialiseAutoVerificationProcess(clientId, userId, agentEmail, clientEmail);
         return ResponseEntity.ok(response);
     }
 

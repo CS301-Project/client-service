@@ -192,7 +192,7 @@ class ClientProfileControllerTest {
 
         ClientStatusResponse response = new ClientStatusResponse(clientId, "ACTIVE");
 
-        when(clientProfileService.updateClientStatus(eq(clientId), eq(true)))
+        when(clientProfileService.updateClientStatus(eq(clientId), eq(true), anyString()))
                 .thenReturn(response);
 
         mockMvc.perform(post("/client-profile/" + clientId + "/verify")
@@ -211,7 +211,7 @@ class ClientProfileControllerTest {
 
         ClientStatusResponse response = new ClientStatusResponse(clientId, "INACTIVE");
 
-        when(clientProfileService.updateClientStatus(eq(clientId), eq(false)))
+        when(clientProfileService.updateClientStatus(eq(clientId), eq(false), anyString()))
                 .thenReturn(response);
 
         mockMvc.perform(post("/client-profile/" + clientId + "/verify")
@@ -228,7 +228,7 @@ class ClientProfileControllerTest {
         ClientStatusUpdateRequest request = new ClientStatusUpdateRequest();
         request.setActivate(true);
 
-        when(clientProfileService.updateClientStatus(eq(clientId), eq(true)))
+        when(clientProfileService.updateClientStatus(eq(clientId), eq(true), anyString()))
                 .thenThrow(new ClientNotFoundException(clientId));
 
         mockMvc.perform(post("/client-profile/" + clientId + "/verify")
@@ -259,7 +259,7 @@ class ClientProfileControllerTest {
         ClientStatusUpdateRequest request = new ClientStatusUpdateRequest();
         request.setActivate(true);
 
-        when(clientProfileService.updateClientStatus(eq(clientId), eq(true)))
+        when(clientProfileService.updateClientStatus(eq(clientId), eq(true), anyString()))
                 .thenThrow(new ClientNotPendingException("Client status must be PENDING to verify"));
 
         mockMvc.perform(post("/client-profile/" + clientId + "/verify")
