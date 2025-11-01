@@ -84,6 +84,7 @@ public class VerificationService {
         try {
             UUID clientId = UUID.fromString(result.getClientId());
             logger.info("Processing verification result for clientId: {}", clientId);
+            logger.info("Extracted Data: {}", result.getExtractedData());
 
             // Fetch client profile from database
             ClientProfile clientProfile = clientProfileRepository.findById(clientId)
@@ -158,10 +159,11 @@ public class VerificationService {
      * Verify that first name and last name are present in the extracted Name field
      */
     private boolean verifyName(ClientProfile clientProfile, Map<String, String> extractedData) {
-        String extractedName = extractedData.get("Name");
+        // Try different case variations of the "Name" key
+        String extractedName = getValueIgnoreCase(extractedData, "NAME", "Name", "name");
 
         if (extractedName == null || extractedName.trim().isEmpty()) {
-            logger.warn("No name found in extracted data");
+            logger.warn("No name found in extracted data. Available keys: {}", extractedData.keySet());
             return false;
         }
 
@@ -185,10 +187,11 @@ public class VerificationService {
      * Verify date of birth with dynamic format handling
      */
     private boolean verifyDateOfBirth(ClientProfile clientProfile, Map<String, String> extractedData) {
-        String extractedDob = extractedData.get("Date of Birth");
+        // Try different case variations of the "Date of Birth" key
+        String extractedDob = getValueIgnoreCase(extractedData, "DATE OF BIRTH", "Date of Birth", "date of birth", "DOB", "Dob", "dob");
 
         if (extractedDob == null || extractedDob.trim().isEmpty()) {
-            logger.warn("No date of birth found in extracted data");
+            logger.warn("No date of birth found in extracted data. Available keys: {}", extractedData.keySet());
             return false;
         }
 
@@ -206,7 +209,7 @@ public class VerificationService {
         logger.debug("DOB verification: Extracted='{}' (parsed: {}), Profile='{}', Match={}",
                 extractedDob, parsedExtractedDate, clientProfile.getDateOfBirth(), match);
 
-        return true;
+        return match;
     }
 
     /**
@@ -218,6 +221,19 @@ public class VerificationService {
                 return LocalDate.parse(dateString, formatter);
             } catch (DateTimeParseException e) {
                 // Try next formatter
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get value from map trying multiple key variations (case-insensitive lookup)
+     */
+    private String getValueIgnoreCase(Map<String, String> map, String... keys) {
+        for (String key : keys) {
+            String value = map.get(key);
+            if (value != null) {
+                return value;
             }
         }
         return null;
