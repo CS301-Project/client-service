@@ -37,13 +37,15 @@ public class VerificationService {
 
     // Common date formats to try
     private static final List<DateTimeFormatter> DATE_FORMATTERS = Arrays.asList(
-        DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH),
-        DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH),
-        DateTimeFormatter.ofPattern("dd/MM/yyyy"),
-        DateTimeFormatter.ofPattern("d/M/yyyy"),
-        DateTimeFormatter.ofPattern("yyyy-MM-dd"),
-        DateTimeFormatter.ofPattern("MM/dd/yyyy"),
-        DateTimeFormatter.ofPattern("dd-MM-yyyy")
+            DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH),  // Handles "02 DEC 2001"
+            DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH),   // Handles "2 DEC 2001"
+            DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+            DateTimeFormatter.ofPattern("d/M/yyyy"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+            DateTimeFormatter.ofPattern("MM/dd/yyyy"),
+            DateTimeFormatter.ofPattern("dd-MM-yyyy"),
+            DateTimeFormatter.ofPattern("dd-MMM-yyyy", Locale.ENGLISH),  // Handles "02-DEC-2001"
+            DateTimeFormatter.ofPattern("d-MMM-yyyy", Locale.ENGLISH)    // Handles "2-DEC-2001"
     );
 
     /**
@@ -195,18 +197,21 @@ public class VerificationService {
             return false;
         }
 
+        logger.info("Verifying DOB - Extracted: '{}', Profile DOB: {}", extractedDob, clientProfile.getDateOfBirth());
+
         // Parse the extracted date using multiple formatters
         LocalDate parsedExtractedDate = parseDate(extractedDob.trim());
 
         if (parsedExtractedDate == null) {
-            logger.warn("Failed to parse extracted date of birth: {}", extractedDob);
+            logger.error("Failed to parse extracted date of birth: '{}' (Profile DOB: {})",
+                    extractedDob, clientProfile.getDateOfBirth());
             return false;
         }
 
         // Compare with client profile date of birth
         boolean match = parsedExtractedDate.equals(clientProfile.getDateOfBirth());
 
-        logger.debug("DOB verification: Extracted='{}' (parsed: {}), Profile='{}', Match={}",
+        logger.info("DOB verification result: Extracted='{}' (parsed: {}), Profile='{}', Match={}",
                 extractedDob, parsedExtractedDate, clientProfile.getDateOfBirth(), match);
 
         return match;
@@ -218,12 +223,60 @@ public class VerificationService {
     private LocalDate parseDate(String dateString) {
         for (DateTimeFormatter formatter : DATE_FORMATTERS) {
             try {
-                return LocalDate.parse(dateString, formatter);
+                LocalDate parsed = LocalDate.parse(dateString, formatter);
+                logger.debug("Successfully parsed '{}' using formatter, result: {}", dateString, parsed);
+                return parsed;
             } catch (DateTimeParseException e) {
                 // Try next formatter
+                logger.trace("Failed to parse '{}' with formatter: {}", dateString, e.getMessage());
             }
         }
+
+        // Additional logging to help debug
+        logger.error("Failed to parse date '{}' with all {} formatters. Trying case-insensitive approach.",
+                dateString, DATE_FORMATTERS.size());
+
+        // Try case-insensitive parsing as a fallback
+        try {
+            // Convert month names to proper case (e.g., "DEC" -> "Dec")
+            String normalizedDate = normalizeDateString(dateString);
+            logger.info("Trying normalized date string: '{}'", normalizedDate);
+
+            for (DateTimeFormatter formatter : DATE_FORMATTERS) {
+                try {
+                    LocalDate parsed = LocalDate.parse(normalizedDate, formatter);
+                    logger.info("Successfully parsed normalized date '{}', result: {}", normalizedDate, parsed);
+                    return parsed;
+                } catch (DateTimeParseException e) {
+                    // Continue trying
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error during normalized date parsing: {}", e.getMessage());
+        }
+
         return null;
+    }
+
+    /**
+     * Normalize date string to handle case variations in month names
+     * Converts "02 DEC 2001" to "02 Dec 2001"
+     */
+    private String normalizeDateString(String dateString) {
+        // Split by spaces or common separators
+        String[] parts = dateString.split("[\\s/-]+");
+
+        if (parts.length == 3) {
+            // Check if middle part is a month name (alphabetic)
+            if (parts[1].matches("[a-zA-Z]+")) {
+                // Capitalize first letter, lowercase rest
+                String normalizedMonth = parts[1].substring(0, 1).toUpperCase() +
+                                       parts[1].substring(1).toLowerCase();
+                return parts[0] + " " + normalizedMonth + " " + parts[2];
+            }
+        }
+
+        return dateString;
     }
 
     /**
