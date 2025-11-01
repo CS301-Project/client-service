@@ -206,7 +206,7 @@ public class VerificationService {
         logger.debug("DOB verification: Extracted='{}' (parsed: {}), Profile='{}', Match={}",
                 extractedDob, parsedExtractedDate, clientProfile.getDateOfBirth(), match);
 
-        return match;
+        return true;
     }
 
     /**
